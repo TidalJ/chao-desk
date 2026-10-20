@@ -1,0 +1,33 @@
+# Builds and tests every push to main and every pull request. Releases come from tags (release.yml).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cache OCR models
+        uses: actions/cache@v4
+        with:
+          path: |
+            models/ocr/*.onnx
+            models/ocr/*.txt
+          key: ocr-${{ hashFiles('models/ocr/models.json') }}
+
+      - name: Build and test
+        shell: pwsh
+        run: ./build.ps1 -Configuration Release

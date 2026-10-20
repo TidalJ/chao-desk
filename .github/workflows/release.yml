@@ -1,0 +1,87 @@
+# Builds, tests and publishes Chao Desk when a version tag is pushed:
+#   bump <Version> in host/src/ChaoDesk.Host/ChaoDesk.Host.csproj, commit, then
+#   git tag v1.1.0 && git push origin main v1.1.0
+# The release gets ChaoDeskSetup-<version>.exe, its .sha256 and latest.json, which the app's updater reads.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # release notes list the commits since the previous tag
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check the tag matches the project version
+        shell: pwsh
+        run: |
+          $proj = [xml](Get-Content host/src/ChaoDesk.Host/ChaoDesk.Host.csproj)
+          $version = @($proj.Project.PropertyGroup.Version | Where-Object { $_ })[0]
+          if ("v$version" -ne $env:GITHUB_REF_NAME) { throw "Tag $env:GITHUB_REF_NAME does not match <Version>$version</Version> in ChaoDesk.Host.csproj" }
+          "VERSION=$version" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+
+      - name: Cache OCR models
+        uses: actions/cache@v4
+        with:
+          path: |
+            models/ocr/*.onnx
+            models/ocr/*.txt
+          key: ocr-${{ hashFiles('models/ocr/models.json') }}
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup --no-progress -y }
+
+      - name: Build, test and package
+        shell: pwsh
+        run: ./build.ps1 -Package
+
+      - name: Checksum and release notes
+        shell: pwsh
+        run: |
+          $setup = "dist/ChaoDeskSetup-$env:VERSION.exe"
+          $hash = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  ChaoDeskSetup-$env:VERSION.exe" | Out-File -Encoding ascii -NoNewline "$setup.sha256"
+          $previous = git describe --tags --abbrev=0 "$env:GITHUB_REF_NAME^" 2>$null
+          if ($LASTEXITCODE -eq 0 -and $previous) { $lines = git log "$previous..$env:GITHUB_REF_NAME" --no-merges --format='- %s' }
+          else { $lines = @('- The first release.') }
+          $global:LASTEXITCODE = 0
+          $notes = @("## What's new", '') + $lines + @('', 'Needs Windows 10 1809 or later, the .NET 8 Desktop Runtime (x64) and the WebView2 Runtime.')
+          $notes = $notes -join "`n"
+          $notes | Out-File -Encoding utf8 notes.md
+          # The app reads this from releases/latest/download/latest.json: a plain download, so no API rate limit.
+          $repo = "https://github.com/$env:GITHUB_REPOSITORY"
+          [ordered]@{
+            version   = $env:VERSION
+            installer = "ChaoDeskSetup-$env:VERSION.exe"
+            url       = "$repo/releases/download/$env:GITHUB_REF_NAME/ChaoDeskSetup-$env:VERSION.exe"
+            size      = (Get-Item $setup).Length
+            sha256    = $hash
+            notes     = $notes
+            page      = "$repo/releases/tag/$env:GITHUB_REF_NAME"
+          } | ConvertTo-Json | Out-File -Encoding utf8NoBOM dist/latest.json
+
+      - name: Publish the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create $env:GITHUB_REF_NAME `
+            "dist/ChaoDeskSetup-$env:VERSION.exe" "dist/ChaoDeskSetup-$env:VERSION.exe.sha256" dist/latest.json `
+            --title "Chao Desk $env:VERSION" --notes-file notes.md --verify-tag
