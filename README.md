@@ -33,7 +33,8 @@ The wallpaper is one module among the tools and can be turned off.
 2. **SmartScreen:** the installer is not code-signed, so Windows may show "Windows protected your
    PC". Click **More info → Run anyway**.
 3. Chao Desk needs the **.NET 8 Desktop Runtime**; the wallpaper also needs the **Microsoft Edge
-   WebView2 Runtime** (ships with Windows 11). The installer checks for both and links to the downloads.
+   WebView2 Runtime** (ships with Windows 11). If either is missing, the installer downloads it from Microsoft and
+   installs it first (.NET asks for administrator permission once).
 
 **Updates:** *Settings → General → Updates* checks GitHub for a newer release (also once a day on its
 own, which can be turned off). **Download and install** fetches the installer, checks its SHA-256 and

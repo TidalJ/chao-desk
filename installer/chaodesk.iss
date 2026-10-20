@@ -2,7 +2,7 @@
 ; Per-user install (no admin rights) to %LOCALAPPDATA%\Programs\ChaoDesk; user data lives in %LOCALAPPDATA%\ChaoDesk.
 
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #define AppVersion "1.0.1"
 #endif
 #ifndef SourceDir
   #define SourceDir "..\dist\app"
@@ -18,7 +18,9 @@
 #define AppIdKey "{7CBE2AA3-F1DE-4CCC-9A2D-EAAB8C49DEDB}"
 #define IndexerTask "\Chao Desk\File index"
 #define WebView2Key "SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
-#define WebView2Url "https://developer.microsoft.com/microsoft-edge/webview2/"
+; Microsoft's own installers, always the latest: the .NET 8 Desktop Runtime (x64) and the WebView2 bootstrapper.
+#define DotNetInstallerUrl "https://aka.ms/dotnet/8.0/windowsdesktop-runtime-win-x64.exe"
+#define WebView2InstallerUrl "https://go.microsoft.com/fwlink/p/?LinkId=2124703"
 
 [Setup]
 AppId={{7CBE2AA3-F1DE-4CCC-9A2D-EAAB8C49DEDB}
@@ -61,10 +63,12 @@ english.TaskDesktopIcon=Create a desktop shortcut
 english.GroupShortcuts=Shortcuts:
 english.IconComment=Launcher, clipboard history, file search and desktop wallpaper
 english.LaunchNow=Launch %1 now
-english.DotNetMissing=Chao Desk needs the Microsoft .NET 8 Desktop Runtime (x64), which was not found on this computer.
-english.DotNetDownload=Open the download page now? Choose ".NET Desktop Runtime 8" for Windows x64, install it, then run Chao Desk.
-english.WebView2Missing=The Chao Desk wallpaper needs the Microsoft Edge WebView2 Runtime, which was not found on this computer.
-english.WebView2Download=Open the download page now? You can continue installing and install the runtime afterwards.
+english.ReadyPrereqs=Also downloaded from Microsoft and installed:
+english.DotNetName=Microsoft .NET 8 Desktop Runtime (about 56 MB; Windows asks for permission)
+english.WebView2Name=Microsoft Edge WebView2 Runtime (about 2 MB; needed by the wallpaper)
+english.InstallingDotNet=Installing the Microsoft .NET 8 Desktop Runtime…
+english.InstallingWebView2=Installing the Microsoft Edge WebView2 Runtime…
+english.PrereqFailed=%1 could not be installed (%2). Chao Desk is installed anyway; install it from Microsoft's website, then start Chao Desk.
 english.DeleteUserData=Also delete your Chao Desk settings, clipboard history, logs and imported wallpapers?
 chinesesimplified.TaskStartup=开机自动启动 Chao Desk
 chinesesimplified.GroupStartup=启动：
@@ -72,10 +76,12 @@ chinesesimplified.TaskDesktopIcon=创建桌面快捷方式
 chinesesimplified.GroupShortcuts=快捷方式：
 chinesesimplified.IconComment=启动器、剪贴板历史、文件搜索和桌面壁纸
 chinesesimplified.LaunchNow=立即运行 %1
-chinesesimplified.DotNetMissing=Chao Desk 需要 Microsoft .NET 8 桌面运行时（x64），但在这台电脑上没有找到。
-chinesesimplified.DotNetDownload=现在打开下载页面吗？请选择适用于 Windows x64 的“.NET Desktop Runtime 8”，安装后再运行 Chao Desk。
-chinesesimplified.WebView2Missing=Chao Desk 的壁纸需要 Microsoft Edge WebView2 运行时，但在这台电脑上没有找到。
-chinesesimplified.WebView2Download=现在打开下载页面吗？也可以先继续安装，之后再安装该运行时。
+chinesesimplified.ReadyPrereqs=同时从微软下载并安装：
+chinesesimplified.DotNetName=Microsoft .NET 8 桌面运行时（约 56 MB，Windows 会请求权限）
+chinesesimplified.WebView2Name=Microsoft Edge WebView2 运行时（约 2 MB，壁纸需要）
+chinesesimplified.InstallingDotNet=正在安装 Microsoft .NET 8 桌面运行时…
+chinesesimplified.InstallingWebView2=正在安装 Microsoft Edge WebView2 运行时…
+chinesesimplified.PrereqFailed=%1 未能安装（%2）。Chao Desk 已照常安装；请从微软官网安装它，然后再启动 Chao Desk。
 chinesesimplified.DeleteUserData=同时删除 Chao Desk 的设置、剪贴板历史、日志和导入的壁纸吗？
 
 [Tasks]
@@ -151,22 +157,87 @@ begin
       if IsVersion8OrNewer(Names[I]) then Result := True;
 end;
 
-function InitializeSetup(): Boolean;
+{ ---- Missing runtimes: downloaded from Microsoft and installed before Chao Desk ---- }
+
 var
-  ErrorCode: Integer;
+  DownloadPage: TDownloadWizardPage;
+  NeedDotNet, NeedWebView2: Boolean;
+
+function InitializeSetup(): Boolean;
+begin
+  NeedDotNet := not DotNetDesktopInstalled();
+  NeedWebView2 := not WebView2Installed();
+  Result := True;
+end;
+
+procedure InitializeWizard();
+begin
+  DownloadPage := CreateDownloadPage(SetupMessage(msgWizardPreparing), SetupMessage(msgPreparingDesc), nil);
+end;
+
+{ The Ready page lists what will be added, so the permission prompt for .NET is no surprise. }
+function UpdateReadyMemo(Space, NewLine, MemoUserInfoInfo, MemoDirInfo, MemoTypeInfo, MemoComponentsInfo, MemoGroupInfo, MemoTasksInfo: String): String;
+begin
+  Result := MemoDirInfo;
+  if MemoGroupInfo <> '' then Result := Result + NewLine + NewLine + MemoGroupInfo;
+  if MemoTasksInfo <> '' then Result := Result + NewLine + NewLine + MemoTasksInfo;
+  if NeedDotNet or NeedWebView2 then
+  begin
+    Result := Result + NewLine + NewLine + CustomMessage('ReadyPrereqs');
+    if NeedDotNet then Result := Result + NewLine + Space + CustomMessage('DotNetName');
+    if NeedWebView2 then Result := Result + NewLine + Space + CustomMessage('WebView2Name');
+  end;
+end;
+
+{ Runs a downloaded installer and reports a failure (the install of Chao Desk itself goes on). }
+procedure RunPrereq(const FileName, Params, Name: String; Elevate: Boolean);
+var
+  ResultCode: Integer;
+  Ok: Boolean;
+begin
+  if Elevate then
+    { The .NET runtime is installed for all users: ShellExec lets Windows ask for administrator permission. }
+    Ok := ShellExec('', ExpandConstant('{tmp}') + FileName, Params, '', SW_SHOW, ewWaitUntilTerminated, ResultCode)
+  else
+    Ok := Exec(ExpandConstant('{tmp}') + FileName, Params, '', SW_SHOW, ewWaitUntilTerminated, ResultCode);
+  { 0 = done; 3010 = done, restart later; 1638 = a newer version is already there. }
+  if not Ok or not ((ResultCode = 0) or (ResultCode = 3010) or (ResultCode = 1638)) then
+  begin
+    Log(Format('%s failed: ok=%d code=%d', [FileName, Ord(Ok), ResultCode]));
+    if not WizardSilent() then
+      MsgBox(FmtMessage(CustomMessage('PrereqFailed'), [Name, IntToStr(ResultCode)]), mbError, MB_OK);
+  end;
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
 begin
   Result := True;
-  if not DotNetDesktopInstalled() then
-  begin
-    if MsgBox(CustomMessage('DotNetMissing') + #13#10#13#10 + CustomMessage('DotNetDownload'),
-              mbConfirmation, MB_YESNO) = IDYES then
-      ShellExec('open', 'https://dotnet.microsoft.com/download/dotnet/8.0', '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode);
-  end;
-  if not WebView2Installed() then
-  begin
-    if MsgBox(CustomMessage('WebView2Missing') + #13#10#13#10 + CustomMessage('WebView2Download'),
-              mbConfirmation, MB_YESNO) = IDYES then
-      ShellExec('open', '{#WebView2Url}', '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode);
+  if (CurPageID <> wpReady) or not (NeedDotNet or NeedWebView2) then Exit;
+  DownloadPage.Clear;
+  if NeedDotNet then DownloadPage.Add('{#DotNetInstallerUrl}', 'windowsdesktop-runtime-8-win-x64.exe', '');
+  if NeedWebView2 then DownloadPage.Add('{#WebView2InstallerUrl}', 'MicrosoftEdgeWebview2Setup.exe', '');
+  DownloadPage.Show;
+  try
+    try
+      DownloadPage.Download;
+      if NeedWebView2 then
+      begin
+        DownloadPage.SetText(CustomMessage('InstallingWebView2'), '');
+        RunPrereq('MicrosoftEdgeWebview2Setup.exe', '/silent /install', 'Microsoft Edge WebView2 Runtime', False);
+      end;
+      if NeedDotNet then
+      begin
+        DownloadPage.SetText(CustomMessage('InstallingDotNet'), '');
+        RunPrereq('windowsdesktop-runtime-8-win-x64.exe', '/install /quiet /norestart', 'Microsoft .NET 8 Desktop Runtime', True);
+      end;
+    except
+      { The download failed or was cancelled: Chao Desk still installs; say what is missing. }
+      Log('Runtime download failed: ' + GetExceptionMessage);
+      if not WizardSilent() then
+        MsgBox(FmtMessage(CustomMessage('PrereqFailed'), ['Microsoft .NET 8 / WebView2', GetExceptionMessage]), mbError, MB_OK);
+    end;
+  finally
+    DownloadPage.Hide;
   end;
 end;
 

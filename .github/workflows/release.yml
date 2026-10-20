@@ -62,7 +62,7 @@ jobs:
           if ($LASTEXITCODE -eq 0 -and $previous) { $lines = git log "$previous..$env:GITHUB_REF_NAME" --no-merges --format='- %s' }
           else { $lines = @('- The first release.') }
           $global:LASTEXITCODE = 0
-          $notes = @("## What's new", '') + $lines + @('', 'Needs Windows 10 1809 or later, the .NET 8 Desktop Runtime (x64) and the WebView2 Runtime.')
+          $notes = @("## What's new", '') + $lines + @('', 'Needs Windows 10 1809 or later. The installer adds the .NET 8 Desktop Runtime and WebView2 from Microsoft if they are missing.')
           $notes = $notes -join "`n"
           $notes | Out-File -Encoding utf8 notes.md
           # The app reads this from releases/latest/download/latest.json: a plain download, so no API rate limit.
