@@ -17,7 +17,7 @@ public enum UpdateState { Idle, Checking, UpToDate, Available, Downloading, Inst
 /// </summary>
 public sealed class UpdateService : IDisposable
 {
-    public const string Repository = "TidalJ/desktop-wallpaper";
+    public const string Repository = "TidalJ/chao-desk";
     private const string LatestUrl = $"https://github.com/{Repository}/releases/latest/download/latest.json";
 
     // Before Http: static initializers run in source order, and the client's User-Agent needs the version.

@@ -27,7 +27,7 @@ The wallpaper is one module among the tools and can be turned off.
 ## Install
 
 1. Download `ChaoDeskSetup-<version>.exe` from the
-   [latest release](https://github.com/TidalJ/desktop-wallpaper/releases/latest) (or build it with
+   [latest release](https://github.com/TidalJ/chao-desk/releases/latest) (or build it with
    `./build.ps1 -Package`, see below) and run it. No admin rights are needed; it installs to
    `%LOCALAPPDATA%\Programs\ChaoDesk`.
 2. **SmartScreen:** the installer is not code-signed, so Windows may show "Windows protected your

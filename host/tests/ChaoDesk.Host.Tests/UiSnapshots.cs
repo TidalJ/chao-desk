@@ -43,7 +43,7 @@ public class UiSnapshots
                     string clipFolder = Path.Combine(Path.GetTempPath(), $"chaodesk-snap-{Guid.NewGuid():N}");
                     var history = new Clips.ClipboardHistory(clipFolder, 50);
                     foreach (var (text, source) in new[] { ("Quarterly report — final figures attached.\nPlease review before Friday.", "Outlook"),
-                                 ("https://github.com/TidalJ/desktop-wallpaper/releases", "Microsoft Edge"), ("会议改到周四下午三点，地点不变。", "WeChat") })
+                                 ("https://github.com/TidalJ/chao-desk/releases", "Microsoft Edge"), ("会议改到周四下午三点，地点不变。", "WeChat") })
                         history.Add(new Clips.ClipItem { Kind = Clips.ClipKind.Text, Text = text, Source = source,
                             Hash = Clips.ClipItem.HashOf(Clips.ClipKind.Text, System.Text.Encoding.UTF8.GetBytes(text)) });
                     using var messages = new Desktop.MessageWindow();
