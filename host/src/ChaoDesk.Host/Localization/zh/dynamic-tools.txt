@@ -1,0 +1,5 @@
+# Tools strings the checker cannot see as literals: XAML text that starts with a key name
+# (Clips/ClipboardWindow.xaml footer).
+# English<TAB>Chinese; \n is a newline.
+Enter paste · Ctrl+T translate · right-click for more	Enter 粘贴 · Ctrl+T 翻译 · 右键查看更多
+Enter paste · Shift+Enter paste as plain text · Ctrl+C copy · Ctrl+T translate (pictures: recognise text) · Ctrl+P pin · Del remove · Tab filter · Ctrl+1…9 paste that entry	Enter 粘贴 · Shift+Enter 粘贴为纯文本 · Ctrl+C 复制 · Ctrl+T 翻译（图片：识别文字）· Ctrl+P 固定 · Del 删除 · Tab 筛选 · Ctrl+1…9 粘贴对应条目

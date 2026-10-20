@@ -1,0 +1,136 @@
+# App host, tray, updates, file search status, OCR engine and online info (AppHost.cs, App.xaml.cs, Tray/, Update/, Files/, Ocr/, Online/).
+# English<TAB>Chinese; \n is a newline.
+
+# ---- Startup ----
+Chao Desk could not start:\n\n{0}	Chao Desk 无法启动：\n\n{0}
+The wallpaper needs the Microsoft Edge WebView2 Runtime, which is not installed. The launcher and clipboard work without it.\n\nOpen the download page now?	壁纸需要 Microsoft Edge WebView2 Runtime，但它尚未安装。启动器和剪贴板历史不需要它也能使用。\n\n现在打开下载页面吗？
+No wallpapers were found. Reinstall Chao Desk or import a wallpaper from Settings.	没有找到壁纸。请重新安装 Chao Desk，或在设置中导入壁纸。
+
+# ---- Updates ----
+Chao Desk {0} is available	Chao Desk {0} 已发布
+Click to see what is new and install it.	点击查看更新内容并安装。
+No published release was found on GitHub.	在 GitHub 上没有找到已发布的版本。
+GitHub answered {0} {1}. Try again later.	GitHub 返回 {0} {1}。请稍后再试。
+The latest release's manifest could not be read.	无法读取最新版本的清单。
+Could not reach GitHub. Check the connection and try again.	无法连接 GitHub。请检查网络连接后重试。
+The download was damaged. Try again.	下载的文件已损坏。请重试。
+The download failed. Try again.	下载失败。请重试。
+
+# ---- Wallpaper status (Settings home and tray tooltip) ----
+Wallpaper off; the widgets show over your Windows wallpaper.	壁纸已关闭；小组件显示在 Windows 壁纸上。
+Wallpaper off.	壁纸已关闭。
+Not attached to the desktop.	未附加到桌面。
+Paused from the tray menu.	已从通知区域菜单暂停。
+Running on your display.	正在显示器上运行。
+Running on all {0} displays.	正在全部 {0} 个显示器上运行。
+Paused — {0}.	已暂停 — {0}。
+Paused.	已暂停。
+Running on {0} of {1} displays; the others are paused ({2}).	正在 {1} 个显示器中的 {0} 个上运行，其余已暂停（{2}）。
+Running on {0} of {1} displays; the others are paused.	正在 {1} 个显示器中的 {0} 个上运行，其余已暂停。
+a full-screen app is running	有全屏应用正在运行
+a maximised window covers the desktop	有最大化的窗口挡住了桌面
+running on battery	正在使用电池供电
+battery saver is on	节电模式已开启
+the session is locked	会话已锁定
+the display is off	显示器已关闭
+the system is sleeping	系统正在睡眠
+wallpaper not attached	壁纸未附加
+wallpaper paused	壁纸已暂停
+wallpaper on {0} of {1} display	壁纸在 {1} 个显示器中的 {0} 个上运行
+wallpaper on {0} of {1} displays	壁纸在 {1} 个显示器中的 {0} 个上运行
+
+# ---- Diagnostics ----
+Desktop	桌面
+Rendering	渲染
+Online info	在线信息
+Files	文件
+Layout	布局
+not detected	未检测到
+Branch	分支
+Parent window	父窗口
+alive	有效
+lost	已丢失
+Windows version	Windows 版本
+Wallpaper	壁纸
+Mouse hook	鼠标钩子
+installed	已安装
+not installed (interaction off)	未安装（鼠标交互已关闭）
+window lost	窗口已丢失
+paused	已暂停
+running	运行中
+paused from tray	已从通知区域暂停
+Displays	显示器
+{0} (primary)	{0}（主显示器）
+{0}×{1} at ({2}, {3})	{0}×{1}，位于 ({2}, {3})
+Library problems	壁纸库问题
+Status	状态
+off	已关闭
+{0} exchange rates (updated {1:HH:mm}), {2} holiday-schedule days	{0} 种汇率（{1:HH:mm} 更新），{2} 天节假日安排
+no city set	未设置城市
+{0}: {1:0.#} °C (updated {2:HH:mm})	{0}：{1:0.#} °C（{2:HH:mm} 更新）
+waiting	等待中
+Settings	设置
+Logs	日志
+User wallpapers	用户壁纸
+Windows 10 / 11 before 24H2	Windows 10 / 24H2 之前的 Windows 11
+fallback	备用方式
+unknown	未知
+{0} FPS · {1} ms per frame · quality {2}	{0} FPS · 每帧 {1} ms · 画质 {2}
+Bank of China page had no rates (layout changed?)	中国银行页面上没有汇率（页面布局可能已更改）
+Exchange rates: {0}	汇率：{0}
+
+# ---- Widgets ----
+Enter a web address (https://…) or the full path of an existing file or folder.	请输入网址（https://…），或现有文件或文件夹的完整路径。
+At most 12 shortcuts.	最多 12 个快捷方式。
+
+# ---- Launcher commands ----
+Chao Desk settings	Chao Desk 设置
+Hotkeys, clipboard, file search and wallpaper	快捷键、剪贴板、文件搜索和壁纸
+Clipboard history	剪贴板历史
+Also {0}	也可按 {0}
+Resume wallpaper	继续播放壁纸
+Pause wallpaper	暂停壁纸
+Screenshot	截图
+Scrolling screenshot	滚动截图
+Pin an area of the screen	将屏幕区域贴图
+Pin the clipboard image	将剪贴板图片贴图
+Recognise text on the screen	识别屏幕上的文字
+Recognise text in the clipboard image	识别剪贴板图片中的文字
+Show pinned images	显示贴图
+Hide pinned images	隐藏贴图
+Close all pinned images	关闭所有贴图
+Lock computer	锁定计算机
+Exit Chao Desk	退出 Chao Desk
+
+# ---- Text recognition ----
+No text found	未找到文字
+Try a larger area.	请尝试选择更大的区域。
+Text recognition is not available.	文字识别不可用。
+text recognition is not available	文字识别不可用
+Copied {0:N0} characters	已复制 {0:N0} 个字符
+No picture on the clipboard	剪贴板中没有图片
+Copy a picture (or take a screenshot) first.	请先复制一张图片（或截图）。
+The text-recognition models are missing; reinstall Chao Desk.	缺少文字识别模型；请重新安装 Chao Desk。
+The text-recognition engine could not start: {0}	文字识别引擎无法启动：{0}
+
+# ---- Hotkeys ----
+{0} is already taken by another app. Choose another combination.	{0} 已被其他应用占用。请换一个组合键。
+Use a combination with Ctrl, Alt, Shift or Win (or an F key).	请使用包含 Ctrl、Alt、Shift 或 Win 的组合键（或 F 键）。
+That combination is already used by another Chao Desk hotkey.	该组合键已被 Chao Desk 的其他快捷键使用。
+
+# ---- File search ----
+File search is off.	文件搜索已关闭。
+File search is not set up yet.	文件搜索尚未设置。
+File search must be set up again: Chao Desk was moved or reinstalled.	需要重新设置文件搜索：Chao Desk 已被移动或重新安装。
+{0:N0} files and folders (saved index; catching up)	{0:N0} 个文件和文件夹（已保存的索引；正在同步更改）
+Starting file search…	正在启动文件搜索…
+Indexing files… {0:N0} so far{1}	正在建立索引… 已有 {0:N0} 个{1}
+{0:N0} files and folders indexed{1}	已索引 {0:N0} 个文件和文件夹{1}
+File search stopped{0}.	文件搜索已停止{0}。
+
+# ---- Tray menu ----
+Search apps and files	搜索应用和文件
+Settings…	设置…
+Add task…	添加待办…
+Open DevTools	打开 DevTools
+Exit	退出

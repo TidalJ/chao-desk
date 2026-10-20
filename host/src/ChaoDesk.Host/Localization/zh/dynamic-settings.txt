@@ -1,0 +1,20 @@
+# Settings window text that reaches Loc through a variable, or that the string scan skips because it starts with a key name.
+# --- XAML hints starting with a key name ---
+Shift+` is the ~ key. Press it again to close the history.	Shift+` 即 ~ 键，再按一次关闭剪贴板历史。
+Enter pastes into the window you came from · Shift+Enter pastes as plain text · Ctrl+C only copies · Ctrl+P pins · Del removes · Ctrl+1…9 pastes an entry · Tab switches All / Pinned / Text / Images / Files · double-click pastes.	Enter 粘贴到原来的窗口 · Shift+Enter 粘贴为纯文本 · Ctrl+C 仅复制 · Ctrl+P 固定 · Del 删除 · Ctrl+1…9 粘贴对应条目 · Tab 切换“全部 / 固定 / 文本 / 图片 / 文件” · 双击粘贴。
+# --- Widget catalog (Settings/Widgets.cs: WidgetCatalog.Catalog names and descriptions; Weather/Tasks/Shortcuts are in other tables) ---
+Calendar	日历
+Date, lunar date, festivals and the official 休/班 schedule. Click it for the month.	日期、农历、节日和官方休/班安排。点击查看整月。
+AUD exchange rate	澳元汇率
+Bank of China quotation for the Australian dollar: selling and buying price.	中国银行澳元牌价：现汇卖出价和买入价。
+Current weather and a 4-day forecast (city: General → Weather city).	当前天气和 4 天预报（城市：通用 → 天气城市）。
+World clock	世界时钟
+Other cities' time (cities: Wallpaper → World clock cities).	其他城市的时间（城市：壁纸 → 世界时钟城市）。
+Clock	时钟
+A large clock. Off by default: the taskbar already shows the time.	大号时钟。默认关闭：任务栏已经显示时间。
+Your task list (Tasks page). Click a task on the desktop to tick it off.	你的待办列表（“待办”页）。在桌面上点击待办即可勾选完成。
+Computer status	电脑状态
+CPU, memory, battery and free disk space, updated every few seconds.	CPU、内存、电池和磁盘剩余空间，每隔几秒更新一次。
+Websites, folders and programs you open often, one click away.	常用的网站、文件夹和程序，一键打开。
+# OCR pack names and descriptions (Ocr/OcrPacks.cs) are in dynamic-app.txt.
+

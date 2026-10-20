@@ -1,0 +1,247 @@
+# Settings window (Settings/SettingsWindow.xaml, SettingsWindow.xaml.cs) and wallpaper import (Library/).
+# --- Library import ---
+Choose a wallpaper folder or a .zip file.	请选择壁纸文件夹或 .zip 文件。
+This is not a valid wallpaper:	这不是有效的壁纸：
+That wallpaper is already in your library.	这个壁纸已在壁纸库中。
+Warnings:	警告：
+Imported "{0}".	已导入“{0}”。
+Import failed: {0}	导入失败：{0}
+# --- Navigation ---
+Home	首页
+TOOLS	工具
+Launcher	启动器
+Clipboard	剪贴板
+WALLPAPER	壁纸
+Library	壁纸库
+Widgets	小组件
+Tasks	待办
+APP	应用
+General	通用
+Diagnostics	诊断
+Version {0}	版本 {0}
+# --- Home ---
+Your tools at a glance.	所有工具，一目了然。
+no hotkey	无快捷键
+{0} · apps, files, sums and commands	{0} · 应用、文件、计算和命令
+{0} · paste anything you copied	{0} · 粘贴复制过的任何内容
+{0} capture · {1} whole screen · {2} pin	{0} 截图 · {1} 全屏 · {2} 贴图
+Scrolling capture {0} · saved to {1}	滚动截图 {0} · 保存到 {1}
+Capture	截图
+Text recognition	文字识别
+{0} · read the text in any part of the screen, offline	{0} · 离线识别屏幕任意区域的文字
+Languages: {0}	语言：{0}
+Recognise	识别
+Space in Explorer previews the selected file	在资源管理器中按 Space 预览选中的文件
+Pictures, PDF, video, music, text, Office documents, folders	图片、PDF、视频、音乐、文本、Office 文档、文件夹
+The lotus pond behind your icons	桌面图标后面的荷塘
+Off — your widgets stay on the Windows wallpaper	已关闭 — 小组件仍显示在 Windows 壁纸上
+Off — Windows' own wallpaper shows	已关闭 — 显示 Windows 自己的壁纸
+Appearance	外观
+Change it under General	在“通用”中更改
+# --- Launcher and file search ---
+One search box for apps, files, commands and quick sums.	一个搜索框，搜应用、文件、命令，还能快速计算。
+Hotkey	快捷键
+Click the box and press a new combination. Backspace turns it off.	点击输入框后按下新的组合键，按 Backspace 关闭。
+File search	文件搜索
+Search files and folders	搜索文件和文件夹
+Finds any file as you type, like Everything (NTFS drives).	像 Everything 一样边输入边找文件（NTFS 磁盘）。
+Set up…	配置…
+Set up again…	重新配置…
+Remove…	移除…
+about {0:N0} MB of memory	约占 {0:N0} MB 内存
+Creates a scheduled task that reads the drives with administrator rights. Windows asks once.	创建一个以管理员权限读取磁盘的计划任务。Windows 只会询问一次。
+Deletes the scheduled task that reads the drives (asks for administrator permission).	删除读取磁盘的计划任务（需要管理员权限）。
+Turn file search off and remove its scheduled task? Windows asks for administrator permission.	要关闭文件搜索并移除其计划任务吗？Windows 会请求管理员权限。
+Include hidden and system files	包括隐藏文件和系统文件
+Also show hidden and system files, such as the Recycle Bin.	同时显示隐藏文件和系统文件，例如回收站。
+Skip bulky system folders	跳过庞大的系统文件夹
+Leaves out node_modules and C:\Windows\WinSxS, which saves a lot of memory.	不收录 node_modules 和 C:\Windows\WinSxS，可省下大量内存。
+Add folder…	添加文件夹…
+Excluded folders	排除的文件夹
+Nothing inside these folders shows up in results.	这些文件夹中的内容不会出现在结果中。
+None.	无。
+Remove	移除
+Choose a folder to leave out of file search	选择要从文件搜索中排除的文件夹
+Preview files with Space	按 Space 预览文件
+Select a file in Explorer and press Space to preview it; Space or Esc closes.	在资源管理器中选中文件后按 Space 预览，按 Space 或 Esc 关闭。
+How to search	搜索方法
+**Apps** — type part of the name, its initials or pinyin: `wx`, `weixin` and `微信` all find 微信; `vsc` finds Visual Studio Code.	**应用** — 输入名称的一部分、首字母或拼音：`wx`、`weixin` 和 `微信` 都能找到微信；`vsc` 能找到 Visual Studio Code。
+**Files** — all words must be in the name. `ext:mp4;mkv` or `*.pdf` filter by type, `folder:` / `file:` by kind, and a word with a backslash (`work\report`) matches the whole path.	**文件** — 所有词都必须出现在名称中。`ext:mp4;mkv` 或 `*.pdf` 按类型筛选，`folder:` / `file:` 按种类筛选，带反斜杠的词（`work\report`）匹配完整路径。
+**Also** — sums like `12*(3+4)`, web addresses, and Chao Desk commands (settings, clipboard, lock, exit).	**其他** — 计算式（如 `12*(3+4)`）、网址，以及 Chao Desk 命令（settings、clipboard、lock、exit）。
+**Keys** — Tab switches All / Apps / Files · Enter opens · Ctrl+Enter shows it in its folder · Ctrl+Shift+Enter runs as administrator · Ctrl+Shift+C copies the path · Alt+1…9 opens a result.	**按键** — Tab 切换“全部 / 应用 / 文件” · Enter 打开 · Ctrl+Enter 在文件夹中显示 · Ctrl+Shift+Enter 以管理员身份运行 · Ctrl+Shift+C 复制路径 · Alt+1…9 打开对应结果。
+# --- Hotkey boxes ---
+Press keys…	请按键…
+Add Ctrl, Alt, Shift or Win	请加上 Ctrl、Alt、Shift 或 Win
+# --- Clipboard ---
+Everything you copy, ready to paste again.	复制过的内容，随时再次粘贴。
+Keep a clipboard history	保留剪贴板历史
+Text, images and copied files. Stored only on this computer.	文本、图片和复制的文件。仅保存在这台电脑上。
+Keep	保留
+The oldest entries go first. Pinned entries (Ctrl+P) are always kept.	最早的条目先被删除。固定的条目（Ctrl+P）始终保留。
+Never record copies from	不记录来自以下程序的复制
+Copies from these apps are not recorded. Separate with commas; Enter applies.	不记录从这些应用复制的内容。用逗号分隔，按 Enter 应用。
+History	历史
+Clear (keep pinned)	清空（保留固定项）
+Keys in the history	历史窗口中的按键
+1 entry.	共 1 条。
+{0:N0} entries.	共 {0:N0} 条。
+Delete the clipboard history? Pinned entries are kept.	要删除剪贴板历史吗？固定的条目会保留。
+# --- Screenshot ---
+Capture, mark up, pin to the screen. Copies also land in the clipboard history.	截取、标注、贴到屏幕上。复制的截图也会进入剪贴板历史。
+Hotkeys	快捷键
+Quick screenshot	快速截图
+The whole screen, straight to the clipboard.	截取整个屏幕，直接复制到剪贴板。
+Scrolls a page and stitches one long image. Esc stops.	自动滚动并拼成长图，按 Esc 停止。
+Pin an area	区域贴图
+Choose an area; it stays on top of everything. Hover it to draw on it.	选择区域并置顶显示，悬停即可在上面绘制。
+Hide / show pinned images	隐藏 / 显示贴图
+Hide every pinned image, and bring them back.	一键隐藏所有贴图，再按一次恢复。
+Choose an area and read its text, offline. Also T while capturing.	选择区域并离线识别文字，截图时按 T 也可识别。
+Saving	保存
+File format	文件格式
+PNG is lossless, JPEG is smaller. Copies always keep full quality.	PNG 无损，JPEG 更小。复制的截图始终保持原画质。
+PNG — lossless	PNG — 无损
+JPEG — quality {0}	JPEG — 质量 {0}
+Change…	更改…
+Choose where screenshots are saved	选择截图的保存位置
+Save every copied screenshot	保存每张复制的截图
+Also save each screenshot you copy. Off: press Ctrl+S to save one.	复制截图时同时保存。关闭时按 Ctrl+S 保存。
+Save quick screenshots	保存快速截图
+Also save quick screenshots to the folder.	快速截图同时保存到文件夹。
+Text recognition (OCR)	文字识别（OCR）
+Read with	识别语言
+Which language packs read the text.	用哪些语言包识别文字。
+After recognising	识别之后
+Open the text window, or copy the text straight away.	打开文字窗口，或直接复制文字。
+Show the text window	显示文字窗口
+Copy the text at once	直接复制文字
+Merge wrapped lines into paragraphs.	把自动换行的文字合并成段落。
+OCR languages	OCR 语言
+Chinese, English and Japanese are built in. Add a language and it is downloaded once (8–14 MB), then works offline; remove it to free the space.	中文、英语和日语为内置语言。添加其他语言只需下载一次（8–14 MB），之后可离线使用；移除即可释放空间。
+Built in	内置
+Downloading {0:P0}	正在下载 {0:P0}
+Cancel	取消
+Installed	已安装
+Add	添加
+Download failed: {0}	下载失败：{0}
+Could not remove it: {0}	无法移除：{0}
+In the capture	截图时
+Hover to pick a window or panel and click to take it, or drag any area. Drag the handles to adjust, arrow keys move it by one pixel (Shift+arrows resize).	鼠标悬停可选中窗口或面板，点击即截取，也可以拖出任意区域。拖动控制点可调整，方向键每次移动一个像素（Shift+方向键调整大小）。
+Toolbar: rectangle, ellipse, arrow, pen, highlighter, text, mosaic, numbered markers (Shift keeps squares and 45° lines) · Ctrl+Z undo.	工具栏：矩形、椭圆、箭头、画笔、荧光笔、文字、马赛克、序号标记（按住 Shift 画正方形和 45° 线）· Ctrl+Z 撤销。
+Pinned images: drag to move, wheel to zoom, Ctrl+wheel for opacity, double-click or Esc to close, right-click for more.	贴图：拖动可移动，滚轮缩放，Ctrl+滚轮调整透明度，双击或 Esc 关闭，右键查看更多操作。
+# --- Library ---
+Click a wallpaper to use it on all displays.	点击壁纸即可在所有显示器上使用。
+Import folder…	导入文件夹…
+Import .zip…	导入 .zip…
+No wallpapers found. Import a wallpaper folder or .zip to get started.	没有找到壁纸。导入壁纸文件夹或 .zip 即可开始使用。
+Built-in wallpaper	内置壁纸
+Imported · {0}	已导入 · {0}
+Preview is created the first time this wallpaper runs	首次运行此壁纸时会生成预览
+by {0}	作者：{0}
+In use	使用中
+Remove from library	从壁纸库移除
+Remove "{0}" from your library?	要从壁纸库中移除“{0}”吗？
+Choose a wallpaper folder (it must contain wallpaper.json)	选择壁纸文件夹（其中须包含 wallpaper.json）
+Choose a wallpaper .zip	选择壁纸 .zip 文件
+Wallpaper package	壁纸包
+Import wallpaper	导入壁纸
+Use it now?	立即使用吗？
+# --- Wallpaper properties ---
+Changes apply to the desktop immediately.	更改会立即应用到桌面。
+Reset to defaults	恢复默认
+This wallpaper has no adjustable properties.	这个壁纸没有可调整的属性。
+Choose a colour	选择颜色
+# --- Widgets ---
+Choose what the card on the desktop shows, and in which order.	选择桌面卡片显示哪些内容，以及它们的顺序。
+Card display	卡片显示方式
+Clock until clicked: a small clock in the corner opens the card.	点击前显示时钟：点击角落的小时钟打开卡片。
+Clock until clicked	点击前显示时钟
+Always open	始终展开
+Stacked shows widgets one below another; tabs show one at a time.	堆叠：小组件上下排列；标签页：每次显示一个。
+Stacked (pages when full)	堆叠（放满后分页）
+Tabs	标签页
+Widgets per page	每页小组件数
+The most widgets on one page in the stacked layout.	堆叠布局下每页最多显示的小组件数。
+Auto (fill the screen)	自动（铺满屏幕）
+{0} widgets	{0} 个小组件
+Move down	下移
+Move up	上移
+Shortcuts	快捷方式
+Shown by the Shortcuts widget. A web address (boc.cn, https://…) or the full path of a folder or program (use Browse).	显示在“快捷方式”小组件中。可以是网址（boc.cn、https://…），也可以是文件夹或程序的完整路径（可用右侧按钮浏览选择）。
+Folder…	文件夹…
+Program…	程序…
+Name (optional)	名称（可选）
+Web address, folder or program	网址、文件夹或程序
+No shortcuts yet.	还没有快捷方式。
+Choose a folder for the shortcut	为快捷方式选择文件夹
+Choose a program or file	选择程序或文件
+Programs and shortcuts	程序和快捷方式
+All files	所有文件
+# --- Tasks ---
+Shown by the Tasks widget (turn it on under Widgets). Click a task on the desktop to tick it off.	显示在“待办”小组件中（在“小组件”页中开启）。在桌面上点击待办即可勾选完成。
+Clear completed	清除已完成
+No tasks yet. Type one above and press Enter.	还没有待办。在上方输入后按 Enter。
+# --- General ---
+The wallpaper, performance, pausing and startup.	壁纸、性能、暂停和启动。
+The language of Chao Desk's windows, menus and desktop widgets.	Chao Desk 窗口、菜单和桌面小组件使用的语言。
+Light, dark, or the same as Windows.	浅色、深色，或跟随 Windows。
+Same as Windows	跟随 Windows
+Light	浅色
+Dark	深色
+Show the interactive wallpaper	显示互动壁纸
+Off: only the tools run, and your Windows wallpaper shows.	关闭后只保留工具，显示原来的 Windows 壁纸。
+Keep the widgets without the wallpaper	关闭壁纸时保留小组件
+Clock, calendar and weather stay on the desktop with the wallpaper off.	关闭壁纸后，时钟、日历和天气仍显示在桌面上。
+Performance	性能
+Frame rate limit	帧率上限
+30 FPS is smooth for a wallpaper and uses half the power of 60.	对壁纸来说 30 FPS 已足够流畅，耗电只有 60 FPS 的一半。
+Render scale	渲染比例
+Lower is lighter on the graphics card; 75 % looks almost the same.	数值越低越省显卡，75 % 看起来几乎一样。
+Quality	画质
+Auto lowers effects if frames take too long.	自动：帧耗时过长时降低特效。
+Auto	自动
+High	高
+Low	低
+Pausing	暂停
+Pause when a window is maximised	窗口最大化时暂停
+Full-screen apps always pause the wallpaper on their display.	全屏应用总会暂停所在显示器上的壁纸。
+Pause on battery	使用电池时暂停
+Battery saver always pauses the wallpaper.	节电模式下总会暂停壁纸。
+Interaction and startup	交互与启动
+Enable mouse interaction	启用鼠标交互
+Clicks on empty desktop space reach the wallpaper, e.g. to feed the koi.	点击桌面空白处可与壁纸互动，例如投喂锦鲤。
+Start with Windows	开机自动启动
+Launch Chao Desk when you sign in.	登录 Windows 时启动 Chao Desk。
+Exchange rates, holidays and weather for the widgets, every 30 minutes.	为小组件获取汇率、节假日和天气，每 30 分钟更新。
+Weather city	天气城市
+For example 北京 or Sydney; empty: no weather. Enter applies.	例如北京或 Sydney，留空不显示天气。按 Enter 应用。
+Translation	翻译
+Translate into	翻译为
+For the Translate button and Ctrl+T. Automatic: Chinese ↔ English.	用于“翻译”按钮和 Ctrl+T。自动：中英互译。
+Automatic (Chinese ↔ English)	自动（中文 ↔ 英语）
+Translation service	翻译服务
+Free, no account. Text is sent only when you translate.	免费、无需账号，只在翻译时发送文字。
+Automatic	自动
+# --- Updates ---
+Updates	更新
+Check for updates automatically	自动检查更新
+Once a day. Nothing is downloaded until you choose to install.	每天检查一次，确认安装后才会下载。
+Checking for updates…	正在检查更新…
+You have the latest version (checked {0:HH:mm}).	已是最新版本（{0:HH:mm} 检查）。
+Version {0} is available ({1:0.0} MB).	新版本 {0} 可用（{1:0.0} MB）。
+Downloading version {0}… {1:P0}	正在下载版本 {0}… {1:P0}
+Installing; Chao Desk restarts by itself in a moment.	正在安装，Chao Desk 稍后会自动重启。
+The update failed.	更新失败。
+Updates come from the app's GitHub releases.	更新来自应用的 GitHub 发布页。
+Download and install	下载并安装
+Installing…	正在安装…
+Checking…	正在检查…
+Check for updates	检查更新
+# --- Diagnostics ---
+What Chao Desk sees on this computer.	Chao Desk 在这台电脑上看到的信息。
+Reload wallpaper	重新加载壁纸
+Open log folder	打开日志文件夹
+Show the translation as soon as the text is recognised.	识别完成后立即显示译文。
+Choose an area or a window, mark it up, then copy, save or pin it.	选择区域或窗口，标注后复制、保存或贴图。
+Enter, Ctrl+C or a double-click copies · Ctrl+S saves · Ctrl+T or {0} pins it to the screen · T recognises the text · C copies the colour under the mouse · right-click or Esc cancels.	Enter、Ctrl+C 或双击复制 · Ctrl+S 保存 · Ctrl+T 或 {0} 贴到屏幕上 · T 识别文字 · C 复制鼠标处的颜色 · 右键或 Esc 取消。
+Enter, Ctrl+C or a double-click copies · Ctrl+S saves · Ctrl+T pins it to the screen · T recognises the text · C copies the colour under the mouse · right-click or Esc cancels.	Enter、Ctrl+C 或双击复制 · Ctrl+S 保存 · Ctrl+T 贴到屏幕上 · T 识别文字 · C 复制鼠标处的颜色 · 右键或 Esc 取消。

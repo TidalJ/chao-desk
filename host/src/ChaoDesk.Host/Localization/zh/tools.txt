@@ -1,0 +1,224 @@
+# Tools: launcher, clipboard history, preview / Quick Look, screenshots and pins, the text recognition window
+# (Launcher/, Clips/, Preview/, Capture/, Ocr/OcrWindow.xaml(.cs)).
+# English<TAB>Chinese; \n is a newline.
+
+# ---- Shared ----
+All	全部
+Apps	应用
+Pinned	已固定
+Pin	固定
+Unpin	取消固定
+Copy	复制
+Open	打开
+Text	文字
+Images	图片
+File	文件
+Folder	文件夹
+App	应用
+Command	命令
+Delete	删除
+Close	关闭
+Paste	粘贴
+Paste as plain text	粘贴为纯文本
+Recognise text	识别文字
+Translate	翻译
+Translating…	正在翻译…
+Could not reach a translation service. Check the connection and try again.	无法连接翻译服务。请检查网络连接后重试。
+Quick Look	快速预览
+Show in folder	在文件夹中显示
+Run as administrator	以管理员身份运行
+{0:N0} character	{0:N0} 个字符
+{0:N0} characters	{0:N0} 个字符
+{0:N0} line	{0:N0} 行
+{0:N0} lines	{0:N0} 行
+
+# ---- Launcher ----
+Search apps and files	搜索应用和文件
+Clear history	清除历史记录
+Forget recently used apps and commands (pins stay)	清除最近使用的应用和命令（已固定的保留）
+Remove from history (Del)	从历史记录中移除（Del）
+Sort files (Ctrl+S)	文件排序（Ctrl+S）
+Press Enter to copy the result	按 Enter 复制结果
+Open in your browser	在浏览器中打开
+Recent	最近
+by name	按名称
+by date modified	按修改日期
+by size	按大小
+{0} among the best {1:N0}	{0}（在最匹配的 {1:N0} 项中）
+No files match	没有匹配的文件
+{0:N0} file matches{1} · {2} ms	{0:N0} 个文件匹配{1} · {2} ms
+{0:N0} files match{1} · {2} ms	{0:N0} 个文件匹配{1} · {2} ms
+Pinned {0}: it shows first when the box is empty.	已固定 {0}：搜索框为空时它显示在最前面。
+Unpinned {0}.	已取消固定 {0}。
+Removed {0} from the history.	已从历史记录中移除 {0}。
+History cleared. Pinned items stay.	历史记录已清除。已固定的项目保留。
+Microsoft Store app	Microsoft Store 应用
+Set up file search again	重新设置文件搜索
+Set up file search	设置文件搜索
+Search every file instantly, like Everything. Windows asks once for administrator permission.	像 Everything 一样即时搜索所有文件。Windows 会请求一次管理员权限。
+File search is turned off in Settings.	文件搜索已在设置中关闭。
+Enter or double-click open · right-click more · Ctrl+P pin	Enter 或双击打开 · 右键更多 · Ctrl+P 固定
+Double-click open · Shift+Enter Quick Look · right-click more · Ctrl+S sort	双击打开 · Shift+Enter 快速预览 · 右键更多 · Ctrl+S 排序
+Enter copy	Enter 复制
+Tab: All / Apps / Files	Tab：全部 / 应用 / 文件
+↓ Name	↓ 名称
+↓ Date	↓ 日期
+↓ Size	↓ 大小
+↓ Relevance	↓ 相关度
+Hide the details and preview	隐藏详细信息和预览
+Show the details and preview	显示详细信息和预览
+Desktop app	桌面应用
+Chao Desk command	Chao Desk 命令
+Calculation	计算
+Web address	网址
+Enter or double-click copies the result.	按 Enter 或双击复制结果。
+version {0}	版本 {0}
+Installed from the Microsoft Store	从 Microsoft Store 安装
+Opened {0} time from here · last {1:yyyy-MM-dd HH:mm}	从这里打开过 {0} 次 · 上次 {1:yyyy-MM-dd HH:mm}
+Opened {0} times from here · last {1:yyyy-MM-dd HH:mm}	从这里打开过 {0} 次 · 上次 {1:yyyy-MM-dd HH:mm}
+Pinned — shown first when the search box is empty	已固定 — 搜索框为空时显示在最前面
+Enter or double-click opens · right-click for more	按 Enter 或双击打开 · 右键查看更多
+Enter or double-click opens it in your browser	按 Enter 或双击在浏览器中打开
+Enter or double-click starts the setup (Windows asks once for permission)	按 Enter 或双击开始设置（Windows 会请求一次权限）
+Enter or double-click runs it	按 Enter 或双击运行
+Run	运行
+Copy result	复制结果
+Enter / double-click	Enter / 双击
+Open with…	打开方式…
+Open containing folder	打开所在文件夹
+Copy path	复制路径
+Copy file	复制文件
+Pin to the top	固定到顶部
+Remove from history	从历史记录中移除
+Properties	属性
+Could not open {0}: {1}	无法打开 {0}：{1}
+
+# ---- Clipboard history ----
+Chao Desk Clipboard	Chao Desk 剪贴板
+Drag to move	拖动以移动
+Search clipboard history	搜索剪贴板历史
+Copy selection	复制所选内容
+Select all	全选
+Pinned: stays open while you paste or drag entries into other windows. Click to unpin.	已固定：粘贴或把条目拖到其他窗口时保持打开。单击取消固定。
+Pin: keep the clipboard open on screen	固定：让剪贴板保持显示在屏幕上
+Pinned — double-click or Enter pastes into the window you used last; drag entries out.	已固定 — 双击或按 Enter 粘贴到上次使用的窗口；也可以把条目拖出去。
+Hide the preview	隐藏预览
+Show the preview	显示预览
+Nothing copied yet.\nText, images and files you copy show up here.	还没有复制任何内容。\n复制的文字、图片和文件会显示在这里。
+Nothing matches.	没有匹配的条目。
+{0:N0} entry	{0:N0} 个条目
+{0:N0} entries	{0:N0} 个条目
+{0} · {1} pinned	{0} · {1} 个已固定
+Image {0} × {1}	图片 {0} × {1}
+{0} files: {1}	{0} 个文件：{1}
+just now	刚刚
+{0} min ago	{0} 分钟前
+yesterday {0:HH:mm}	昨天 {0:HH:mm}
+
+# ---- Preview and Quick Look ----
+— Slide {0} —	— 幻灯片 {0} —
+Shift+Enter plays it in Quick Look · double-click opens it	Shift+Enter 在快速预览中播放 · 双击打开
+This document could not be read.	无法读取此文档。
+{0} · {1:N0} lines	{0} · {1:N0} 行
+text only	仅文字
+downloaded from the internet — text only	从 Internet 下载 — 仅文字
+Unblock and preview	解除锁定并预览
+Downloaded from the internet: Office only previews it once you unblock it.	此文件从 Internet 下载：解除锁定后 Office 才会预览它。
+Folder · modified {0:yyyy-MM-dd HH:mm}	文件夹 · 修改于 {0:yyyy-MM-dd HH:mm}
+{0} · modified {1:yyyy-MM-dd HH:mm}	{0} · 修改于 {1:yyyy-MM-dd HH:mm}
+Ctrl+wheel: zoom · Ctrl+0: fit	Ctrl+滚轮：缩放 · Ctrl+0：适应窗口
+Loading…	正在加载…
+This preview needs the Microsoft Edge WebView2 Runtime.	此预览需要 Microsoft Edge WebView2 运行时。
+Click to pause	单击暂停
+Paused — click to play	已暂停 — 单击播放
+Windows has no codec to play this video. Press Enter to open it in your player.	Windows 没有播放此视频的解码器。按 Enter 用播放器打开。
+the Office preview could not open it — text only	Office 预览无法打开 — 仅文字
+The installed preview for this kind of file could not open it.	已安装的此类文件预览程序无法打开它。
+first 4 MB · {0:N0} lines	前 4 MB · {0:N0} 行
+{0:N0} folders, {1:N0} files	{0:N0} 个文件夹，{1:N0} 个文件
+{0:N0} files inside, {1} unpacked	内含 {0:N0} 个文件，解压后 {1}
+Not a readable zip archive.	不是可读取的 zip 压缩包。
+{0} · {1:N0} glyphs	{0} · {1:N0} 个字形
+{0} · created {1:yyyy-MM-dd HH:mm} · modified {2:yyyy-MM-dd HH:mm}	{0} · 创建于 {1:yyyy-MM-dd HH:mm} · 修改于 {2:yyyy-MM-dd HH:mm}
+No preview for this kind of file. Press Enter to open it.	此类文件没有预览。按 Enter 打开。
+Show the text only (T)	仅显示文字（T）
+Open with the default app (Enter)	用默认应用打开（Enter）
+Close (Space, Esc)	关闭（Space、Esc）
+
+# ---- Screenshots and pins ----
+{0}, {1}   #{2:X6}\nC: copy colour · Esc: cancel	{0}, {1}   #{2:X6}\nC：复制颜色 · Esc：取消
+Rectangle	矩形
+Ellipse	椭圆
+Arrow (Shift: 45°)	箭头（Shift：45°）
+Arrow	箭头
+Pen	画笔
+Highlighter	荧光笔
+Mosaic	马赛克
+Numbered marker	序号标记
+Undo (Ctrl+Z)	撤销（Ctrl+Z）
+Recognise text (T)	识别文字（T）
+Scrolling capture: scrolls the area and stitches a long image	滚动截图：滚动该区域并拼接成长图
+Pin to the screen (Ctrl+T)	贴到屏幕上（Ctrl+T）
+Save (Ctrl+S)	保存（Ctrl+S）
+Cancel (Esc)	取消（Esc）
+Copy (Enter, double-click)	复制（Enter、双击）
+No pinned images	没有贴图
+Pinned image	贴图
+{0:P0} · wheel: zoom · Ctrl+wheel: opacity ({1:P0}) · double-click: close	{0:P0} · 滚轮：缩放 · Ctrl+滚轮：不透明度（{1:P0}） · 双击：关闭
+Save as…	另存为…
+Undo last mark	撤销上一个标注
+Actual size	实际大小
+Opacity 100 %	不透明度 100%
+Move (drag)	移动（拖动）
+Copy (Ctrl+C)	复制（Ctrl+C）
+Close (Esc, double-click)	关闭（Esc、双击）
+Screenshot copied	截图已复制
+Saved to {0}	已保存到 {0}
+Nothing to pin	没有可贴的内容
+Copy an image or some text first.	请先复制一张图片或一些文字。
+Area too small	区域太小
+Select a larger area for a scrolling capture.	请为滚动截图选择更大的区域。
+Long screenshot copied	长截图已复制
+{0} × {1} · saved to {2}	{0} × {1} · 已保存到 {2}
+Stop	停止
+Scrolling… Esc or Stop to finish	正在滚动… 按 Esc 或“停止”结束
+Scrolling… {0:N0} px · Esc or Stop to finish	正在滚动… {0:N0} px · 按 Esc 或“停止”结束
+Save screenshot	保存截图
+PNG image (lossless)|*.png|JPEG image (smaller)|*.jpg	PNG 图片（无损）|*.png|JPEG 图片（更小）|*.jpg
+Could not save the screenshot:\n\n{0}	无法保存截图：\n\n{0}
+
+# ---- Text recognition window ----
+Recognised text — Chao Desk	识别的文字 — Chao Desk
+Pin picture	贴图
+Keep the picture on top of the screen	把图片固定显示在屏幕最上层
+Copy all	全部复制
+Copy all the text (Ctrl+Shift+C)	复制全部文字（Ctrl+Shift+C）
+Language	语言
+Join lines into paragraphs	将多行合并为段落
+Recognising…	正在识别…
+All installed languages	所有已安装的语言
+{0} only	仅{0}
+No text found in this picture.	此图片中未找到文字。
+Text recognition failed: {0}	文字识别失败：{0}
+Copied {0} word.	已复制 {0} 个词。
+Copied {0} words.	已复制 {0} 个词。
+Copied the translation.	已复制译文。
+Copied all the text.	已复制全部文字。
+Translated into {0} by {1}	已由 {1} 译为{0}
+The clipboard is busy; try again.	剪贴板正忙，请重试。
+Hide translation	隐藏译文
+Translation · {0} · {1}	译文 · {0} · {1}
+Translation · {0} → {1} · {2}	译文 · {0} → {1} · {2}
+Translation hidden.	已隐藏译文。
+Enter pastes the translation · Shift+Enter the original · Ctrl+T hides the translation	Enter 粘贴译文 · Shift+Enter 粘贴原文 · Ctrl+T 隐藏译文
+Show the translation under the text (Ctrl+T); again to hide it	在文字下方显示译文（Ctrl+T）；再按一次隐藏
+Translate automatically	自动翻译
+Translate the text as soon as it is recognised (the text is sent to the translation service)	识别完成后立即翻译（文字会发送给翻译服务）
+Recognised text	识别结果
+Copy the translation	复制译文
+Translate again	重新翻译
+The text was changed after it was translated	翻译之后原文已修改
+Press {0} and choose an area to pin it to the screen.	按 {0} 并选择一个区域，即可把它贴到屏幕上。
+Choose “Pin an area of the screen” in the launcher to pin part of the screen.	在启动器中选择“将屏幕区域贴图”，即可把屏幕的一部分贴到屏幕上。
+Drag over the picture to pick words · Ctrl+T translate · Esc close	在图片上拖动选取文字 · Ctrl+T 翻译 · Esc 关闭
+Drag over the picture to pick words · double-click a word picks its line · Ctrl+C copies the picked words · Ctrl+Shift+C copies all the text · Ctrl+T shows the translation · Esc closes	在图片上拖动选取文字 · 双击一个词选取整行 · Ctrl+C 复制选取的文字 · Ctrl+Shift+C 复制全部文字 · Ctrl+T 显示译文 · Esc 关闭

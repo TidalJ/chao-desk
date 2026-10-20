@@ -1,0 +1,43 @@
+# Lotus Pond wallpaper (wallpapers/lotus-pond/wallpaper.json): the name, property labels and combo option
+# display text shown on Settings → Wallpaper. Combo options are stored by their English text; only what is shown
+# is translated.
+Lotus Pond	荷塘
+# Pond
+Pond	池塘
+Celadon basin	青瓷水盆
+Wisteria garden	紫藤花园
+Summer lotus	夏日荷花
+Autumn leaves	秋日落叶
+# Weather
+Weather	天气
+Follow real weather	跟随实时天气
+Sunny	晴天
+Cloudy	多云
+Rain	下雨
+Snow	下雪
+# Day and night
+Day and night	昼夜
+Follow clock	跟随时间
+Day	白天
+Night	夜晚
+# Koi and effects
+Koi	锦鲤数量
+Koi size	锦鲤大小
+Swimming speed	游动速度
+Rain amount	雨量
+Snow amount	雪量
+Floating lily pads (summer)	漂浮的荷叶（夏日）
+Drifting petals and leaves	飘落的花瓣和树叶
+Fireflies at night	夜晚的萤火虫
+# The widget card
+Card position	卡片位置
+Top right	右上角
+Top left	左上角
+Bottom right	右下角
+Bottom left	左下角
+Off	关闭
+Card language	卡片语言
+Same as Chao Desk	跟随 Chao Desk
+24-hour clock	24 小时制
+Show the boc.cn link on the rate card	在汇率卡片上显示 boc.cn 链接
+World clock cities (comma separated, e.g. 北京, 悉尼, 伦敦)	世界时钟城市（用逗号分隔，例如：北京, 悉尼, 伦敦）

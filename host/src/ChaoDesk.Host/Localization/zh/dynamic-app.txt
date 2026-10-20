@@ -1,0 +1,31 @@
+# Strings that reach Loc.T through a variable: translation target names (Translate/Translator.cs,
+# TranslationNames.Language) and OCR language pack names and descriptions (Ocr/OcrPacks.cs, OcrPack.Name/Covers).
+
+# ---- Translation targets ----
+Chinese	中文
+English	英语
+Japanese	日语
+Korean	韩语
+French	法语
+German	德语
+Spanish	西班牙语
+Russian	俄语
+
+# ---- OCR language packs ----
+Chinese, English, Japanese	中文、英语、日语
+Simplified and traditional Chinese, English, pinyin and Japanese, also mixed in one line	简体和繁体中文、英语、拼音和日语，同一行中混排也能识别
+Latin-script languages	拉丁字母语言
+French, German, Spanish, Italian, Portuguese, Dutch, Polish, Czech, Turkish, Vietnamese and more	法语、德语、西班牙语、意大利语、葡萄牙语、荷兰语、波兰语、捷克语、土耳其语、越南语等
+Korean (Hangul), with English	韩语（谚文），以及英语
+Russian, Ukrainian, Belarusian	俄语、乌克兰语、白俄罗斯语
+East Slavic languages in Cyrillic script	使用西里尔字母的东斯拉夫语言
+Other Cyrillic-script languages	其他西里尔字母语言
+Serbian, Bulgarian, Macedonian, Mongolian, Kazakh and more	塞尔维亚语、保加利亚语、马其顿语、蒙古语、哈萨克语等
+Arabic script	阿拉伯字母
+Arabic, Persian, Urdu, Uyghur and more (read right to left)	阿拉伯语、波斯语、乌尔都语、维吾尔语等（从右向左阅读）
+Thai	泰语
+Greek	希腊语
+Devanagari script	天城文
+Hindi, Marathi, Nepali, Sanskrit and more	印地语、马拉地语、尼泊尔语、梵语等
+Tamil	泰米尔语
+Telugu	泰卢固语
