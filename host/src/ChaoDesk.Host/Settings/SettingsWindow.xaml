@@ -1,0 +1,674 @@
+<Window x:Class="ChaoDesk.Host.Settings.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Chao Desk"
+        Width="960" Height="640" MinWidth="760" MinHeight="480"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource PaperBrush}"
+        FontFamily="Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI"
+        FontSize="13"
+        Foreground="{DynamicResource InkBrush}"
+        TextOptions.TextFormattingMode="Display"
+        UseLayoutRounding="True">
+    <Window.Resources>
+        <!-- Sidebar navigation item -->
+        <Style x:Key="NavItem" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Margin" Value="0,2" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Bg" CornerRadius="4" Padding="14,9" Background="Transparent">
+                            <Grid>
+                                <Border x:Name="Bar" Width="3" CornerRadius="2" HorizontalAlignment="Left" Margin="-10,2,0,2"
+                                        Background="{DynamicResource AccentBrush}" Visibility="Collapsed" />
+                                <ContentPresenter />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource HoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource NavSelectedBrush}" />
+                                <Setter TargetName="Bar" Property="Visibility" Value="Visible" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar -->
+        <Border Grid.Column="0" Background="{DynamicResource SidebarBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,1,0">
+            <DockPanel Margin="16,20,16,16">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4,0,0,22">
+                    <Image x:Name="LogoImage" Width="32" Height="32" Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Chao Desk" FontSize="17" FontWeight="SemiBold" />
+                        <TextBlock x:Name="VersionText" Text="" FontSize="11" Foreground="{DynamicResource MutedBrush}" />
+                    </StackPanel>
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Bottom" x:Name="StatusText" TextWrapping="Wrap" FontSize="11.5"
+                           Foreground="{DynamicResource MutedBrush}" Margin="4,12,4,0" />
+                <StackPanel>
+                    <RadioButton x:Name="NavHome" Style="{StaticResource NavItem}" GroupName="nav" Content="Home" IsChecked="True" Checked="OnNavChanged" />
+                    <TextBlock Text="TOOLS" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" Margin="14,16,0,4" />
+                    <RadioButton x:Name="NavLauncher" Style="{StaticResource NavItem}" GroupName="nav" Content="Launcher" Checked="OnNavChanged" />
+                    <RadioButton x:Name="NavClipboard" Style="{StaticResource NavItem}" GroupName="nav" Content="Clipboard" Checked="OnNavChanged" />
+                    <RadioButton x:Name="NavScreenshot" Style="{StaticResource NavItem}" GroupName="nav" Content="Screenshot" Checked="OnNavChanged" />
+                    <TextBlock Text="WALLPAPER" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" Margin="14,16,0,4" />
+                    <RadioButton x:Name="NavLibrary" Style="{StaticResource NavItem}" GroupName="nav" Content="Library" Checked="OnNavChanged" />
+                    <RadioButton x:Name="NavProperties" Style="{StaticResource NavItem}" GroupName="nav" Content="Wallpaper" Checked="OnNavChanged" />
+                    <RadioButton x:Name="NavWidgets" Style="{StaticResource NavItem}" GroupName="nav" Content="Widgets" Checked="OnNavChanged" />
+                    <RadioButton x:Name="NavTasks" Style="{StaticResource NavItem}" GroupName="nav" Content="Tasks" Checked="OnNavChanged" />
+                    <TextBlock Text="APP" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" Margin="14,16,0,4" />
+                    <RadioButton x:Name="NavGeneral" Style="{StaticResource NavItem}" GroupName="nav" Content="General" Checked="OnNavChanged" />
+                    <RadioButton x:Name="NavDiagnostics" Style="{StaticResource NavItem}" GroupName="nav" Content="Diagnostics" Checked="OnNavChanged" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Pages -->
+        <Grid Grid.Column="1">
+            <!-- Home: every tool at a glance -->
+            <DockPanel x:Name="HomePage" Margin="32,26,24,20">
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,8,18">
+                    <TextBlock Style="{StaticResource PageTitle}" Text="Chao Desk" />
+                    <TextBlock Style="{StaticResource PageSubtitle}" Text="Your tools at a glance." />
+                </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="HomePanel" Margin="0,0,8,12" VerticalAlignment="Top" />
+                </ScrollViewer>
+            </DockPanel>
+
+            <!-- Launcher and file search -->
+            <DockPanel x:Name="LauncherPage" Margin="32,26,24,20" Visibility="Collapsed">
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,8,18">
+                    <TextBlock Style="{StaticResource PageTitle}" Text="Launcher" />
+                    <TextBlock Style="{StaticResource PageSubtitle}" Text="One search box for apps, files, commands and quick sums." />
+                </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="0,0,8,12">
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Hotkey" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Click the box and press a new combination. Backspace turns it off." />
+                                        <TextBlock x:Name="LauncherHotkeyError" Style="{StaticResource SettingHint}" Foreground="{DynamicResource DangerBrush}" Visibility="Collapsed" />
+                                    </StackPanel>
+                                    <TextBox x:Name="LauncherHotkeyBox" Style="{StaticResource FieldText}" Width="160" Tag="launcher" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="File search" />
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Search files and folders" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Finds any file as you type, like Everything (NTFS drives)." />
+                                    </StackPanel>
+                                    <CheckBox x:Name="FileSearchCheck" Style="{StaticResource ToggleSwitch}" Click="OnFileSearchToggled" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Status" />
+                                        <TextBlock x:Name="FileSearchStatusText" Style="{StaticResource SettingHint}" />
+                                    </StackPanel>
+                                    <Button x:Name="FileSearchSetupButton" Style="{StaticResource SecondaryButton}" Content="Set up…" Click="OnFileSearchSetup"
+                                            HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Include hidden and system files" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Also show hidden and system files, such as the Recycle Bin." />
+                                    </StackPanel>
+                                    <CheckBox x:Name="FileHiddenCheck" Style="{StaticResource ToggleSwitch}" Click="OnFileHiddenToggled" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Skip bulky system folders" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Leaves out node_modules and C:\Windows\WinSxS, which saves a lot of memory." />
+                                    </StackPanel>
+                                    <CheckBox x:Name="FileSkipJunkCheck" Style="{StaticResource ToggleSwitch}" Click="OnFileSkipJunkToggled" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <StackPanel Margin="0,10">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Content="Add folder…" Click="OnAddExcludedFolder" VerticalAlignment="Top" />
+                                        <StackPanel Margin="0,0,16,0">
+                                            <TextBlock Style="{StaticResource SettingLabel}" Text="Excluded folders" />
+                                            <TextBlock Style="{StaticResource SettingHint}" Text="Nothing inside these folders shows up in results." />
+                                        </StackPanel>
+                                    </DockPanel>
+                                    <StackPanel x:Name="ExcludedPanel" Margin="0,8,0,0" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="Quick Look" />
+                        <Border Style="{StaticResource Card}">
+                            <Grid Style="{StaticResource SettingRow}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource SettingLabel}" Text="Preview files with Space" />
+                                    <TextBlock Style="{StaticResource SettingHint}" Text="Select a file in Explorer and press Space to preview it; Space or Esc closes." />
+                                </StackPanel>
+                                <CheckBox x:Name="QuickLookCheck" Style="{StaticResource ToggleSwitch}" Click="OnQuickLookToggled" />
+                            </Grid>
+                        </Border>
+
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="How to search" />
+                        <Border Style="{StaticResource Card}" Padding="18,12">
+                            <!-- Filled in code (SettingsWindow.FillHelpTexts): one table entry per line -->
+                            <TextBlock x:Name="SearchHelpText" Style="{StaticResource SettingHint}" FontSize="12.5" LineHeight="21" Margin="0" />
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+
+            <!-- Clipboard -->
+            <DockPanel x:Name="ClipboardPage" Margin="32,26,24,20" Visibility="Collapsed">
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,8,18">
+                    <TextBlock Style="{StaticResource PageTitle}" Text="Clipboard" />
+                    <TextBlock Style="{StaticResource PageSubtitle}" Text="Everything you copy, ready to paste again." />
+                </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="0,0,8,12">
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Keep a clipboard history" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Text, images and copied files. Stored only on this computer." />
+                                    </StackPanel>
+                                    <CheckBox x:Name="ClipboardCheck" Style="{StaticResource ToggleSwitch}" Click="OnClipboardToggled" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Hotkey" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Shift+` is the ~ key. Press it again to close the history." />
+                                        <TextBlock x:Name="ClipboardHotkeyError" Style="{StaticResource SettingHint}" Foreground="{DynamicResource DangerBrush}" Visibility="Collapsed" />
+                                    </StackPanel>
+                                    <TextBox x:Name="ClipboardHotkeyBox" Style="{StaticResource FieldText}" Width="160" Tag="clipboard" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Keep" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="The oldest entries go first. Pinned entries (Ctrl+P) are always kept." />
+                                    </StackPanel>
+                                    <ComboBox x:Name="ClipboardSizeCombo" Style="{StaticResource FieldCombo}" SelectionChanged="OnClipboardSizeChanged" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Never record copies from" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Copies from these apps are not recorded. Separate with commas; Enter applies." />
+                                    </StackPanel>
+                                    <TextBox x:Name="IgnoredAppsBox" Style="{StaticResource FieldText}" Width="200" LostFocus="OnIgnoredAppsChanged" KeyDown="OnIgnoredAppsKey" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="History" />
+                                        <TextBlock x:Name="ClipboardCountText" Style="{StaticResource SettingHint}" />
+                                    </StackPanel>
+                                    <Button Style="{StaticResource SecondaryButton}" Content="Clear (keep pinned)" Click="OnClearClipboard" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="Keys in the history" />
+                        <Border Style="{StaticResource Card}" Padding="18,12">
+                            <TextBlock Style="{StaticResource SettingHint}" FontSize="12.5" LineHeight="21" Margin="0"
+                                       Text="Enter pastes into the window you came from · Shift+Enter pastes as plain text · Ctrl+C only copies · Ctrl+P pins · Del removes · Ctrl+1…9 pastes an entry · Tab switches All / Pinned / Text / Images / Files · double-click pastes." />
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+
+            <!-- Screenshot -->
+            <DockPanel x:Name="ScreenshotPage" Margin="32,26,24,20" Visibility="Collapsed">
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,8,18">
+                    <TextBlock Style="{StaticResource PageTitle}" Text="Screenshot" />
+                    <TextBlock Style="{StaticResource PageSubtitle}" Text="Capture, mark up, pin to the screen. Copies also land in the clipboard history." />
+                </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="0,0,8,12">
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="Hotkeys" Margin="4,0,0,8" />
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel x:Name="ScreenshotHotkeysPanel" />
+                        </Border>
+
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="Saving" />
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="File format" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="PNG is lossless, JPEG is smaller. Copies always keep full quality." />
+                                    </StackPanel>
+                                    <ComboBox x:Name="ShotFormatCombo" Style="{StaticResource FieldCombo}" SelectionChanged="OnShotFormatChanged" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <StackPanel Margin="0,10">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Content="Open" Click="OnOpenShotFolder" Margin="8,0,0,0" VerticalAlignment="Top" />
+                                        <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Content="Change…" Click="OnChangeShotFolder" VerticalAlignment="Top" />
+                                        <StackPanel Margin="0,0,16,0">
+                                            <TextBlock Style="{StaticResource SettingLabel}" Text="Folder" />
+                                            <TextBlock x:Name="ShotFolderText" Style="{StaticResource SettingHint}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                </StackPanel>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Save every copied screenshot" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Also save each screenshot you copy. Off: press Ctrl+S to save one." />
+                                    </StackPanel>
+                                    <CheckBox x:Name="ShotAutoSaveCheck" Style="{StaticResource ToggleSwitch}" Click="OnShotTogglesChanged" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Save quick screenshots" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Also save quick screenshots to the folder." />
+                                    </StackPanel>
+                                    <CheckBox x:Name="ShotQuickSaveCheck" Style="{StaticResource ToggleSwitch}" Click="OnShotTogglesChanged" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="Text recognition (OCR)" />
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Read with" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Which language packs read the text." />
+                                    </StackPanel>
+                                    <ComboBox x:Name="OcrLanguageCombo" Style="{StaticResource FieldCombo}" Width="220" SelectionChanged="OnOcrChanged" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="After recognising" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Open the text window, or copy the text straight away." />
+                                    </StackPanel>
+                                    <ComboBox x:Name="OcrAfterCombo" Style="{StaticResource FieldCombo}" Width="200" SelectionChanged="OnOcrChanged" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Join lines into paragraphs" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Merge wrapped lines into paragraphs." />
+                                    </StackPanel>
+                                    <CheckBox x:Name="OcrMergeCheck" Style="{StaticResource ToggleSwitch}" Click="OnOcrChanged" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Translate automatically" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Show the translation as soon as the text is recognised." />
+                                    </StackPanel>
+                                    <CheckBox x:Name="OcrTranslateCheck" Style="{StaticResource ToggleSwitch}" Click="OnOcrChanged" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="OCR languages" />
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SettingHint}" Margin="0,10,0,4" TextWrapping="Wrap"
+                                           Text="Chinese, English and Japanese are built in. Add a language and it is downloaded once (8–14 MB), then works offline; remove it to free the space." />
+                                <StackPanel x:Name="OcrPacksPanel" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="In the capture" />
+                        <Border Style="{StaticResource Card}" Padding="18,12">
+                            <!-- Filled in code (SettingsWindow.FillHelpTexts): one table entry per line -->
+                            <TextBlock x:Name="CaptureHelpText" Style="{StaticResource SettingHint}" FontSize="12.5" LineHeight="21" Margin="0" />
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+
+            <!-- Library -->
+            <DockPanel x:Name="LibraryPage" Margin="32,26,24,20" Visibility="Collapsed">
+                <Grid DockPanel.Dock="Top" Margin="0,0,8,18">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PageTitle}" Text="Library" />
+                        <TextBlock Style="{StaticResource PageSubtitle}" Text="Click a wallpaper to use it on all displays." />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                        <Button Style="{StaticResource SecondaryButton}" Content="Import folder…" Click="OnImportFolder" Margin="0,0,8,0" />
+                        <Button Style="{StaticResource SecondaryButton}" Content="Import .zip…" Click="OnImportZip" />
+                    </StackPanel>
+                </Grid>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <WrapPanel x:Name="LibraryPanel" Margin="0,0,0,12" />
+                </ScrollViewer>
+            </DockPanel>
+
+            <!-- Wallpaper properties -->
+            <DockPanel x:Name="PropertiesPage" Margin="32,26,24,20" Visibility="Collapsed">
+                <Grid DockPanel.Dock="Top" Margin="0,0,8,18">
+                    <StackPanel>
+                        <TextBlock x:Name="PropertiesTitle" Style="{StaticResource PageTitle}" Text="Wallpaper" />
+                        <TextBlock Style="{StaticResource PageSubtitle}" Text="Changes apply to the desktop immediately." />
+                    </StackPanel>
+                    <Button Style="{StaticResource SecondaryButton}" Content="Reset to defaults" Click="OnResetProperties"
+                            HorizontalAlignment="Right" VerticalAlignment="Top" />
+                </Grid>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Border Style="{StaticResource Card}" Margin="0,0,8,12">
+                        <StackPanel x:Name="PropertiesPanel" />
+                    </Border>
+                </ScrollViewer>
+            </DockPanel>
+
+            <!-- Widgets -->
+            <DockPanel x:Name="WidgetsPage" Margin="32,26,24,20" Visibility="Collapsed">
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,8,18">
+                    <TextBlock Style="{StaticResource PageTitle}" Text="Widgets" />
+                    <TextBlock Style="{StaticResource PageSubtitle}" Text="Choose what the card on the desktop shows, and in which order." />
+                </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="0,0,8,12">
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Card display" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Clock until clicked: a small clock in the corner opens the card." />
+                                    </StackPanel>
+                                    <ComboBox x:Name="DisplayCombo" Style="{StaticResource FieldCombo}" SelectionChanged="OnDisplayChanged" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Layout" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Stacked shows widgets one below another; tabs show one at a time." />
+                                    </StackPanel>
+                                    <ComboBox x:Name="LayoutCombo" Style="{StaticResource FieldCombo}" SelectionChanged="OnLayoutChanged" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Widgets per page" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="The most widgets on one page in the stacked layout." />
+                                    </StackPanel>
+                                    <ComboBox x:Name="PerPageCombo" Style="{StaticResource FieldCombo}" SelectionChanged="OnPerPageChanged" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="Widgets" />
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel x:Name="WidgetsPanel" />
+                        </Border>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="Shortcuts" />
+                        <Border Style="{StaticResource Card}" Padding="12">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SettingHint}" Margin="0,0,0,8" TextWrapping="Wrap"
+                                           Text="Shown by the Shortcuts widget. A web address (boc.cn, https://…) or the full path of a folder or program (use Browse)." />
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Content="Add" Click="OnAddShortcut" Margin="8,0,0,0" />
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Content="Folder…" Click="OnBrowseFolder" Margin="8,0,0,0" />
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Content="Program…" Click="OnBrowseProgram" Margin="8,0,0,0" />
+                                    <TextBox x:Name="ShortcutNameBox" DockPanel.Dock="Left" Width="130" Height="32" VerticalContentAlignment="Center" Padding="8,0" MaxLength="20"
+                                             BorderBrush="{DynamicResource LineBrush}" ToolTip="Name (optional)" Margin="0,0,8,0" />
+                                    <TextBox x:Name="ShortcutTargetBox" Height="32" VerticalContentAlignment="Center" Padding="8,0" MaxLength="400"
+                                             BorderBrush="{DynamicResource LineBrush}" ToolTip="Web address, folder or program" KeyDown="OnShortcutKey" />
+                                </DockPanel>
+                                <TextBlock x:Name="ShortcutError" Foreground="{DynamicResource DangerBrush}" Margin="2,6,0,0" TextWrapping="Wrap" Visibility="Collapsed" />
+                                <StackPanel x:Name="ShortcutsPanel" Margin="0,8,0,0" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+
+            <!-- Tasks -->
+            <DockPanel x:Name="TasksPage" Margin="32,26,24,20" Visibility="Collapsed">
+                <Grid DockPanel.Dock="Top" Margin="0,0,8,18">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PageTitle}" Text="Tasks" />
+                        <TextBlock Style="{StaticResource PageSubtitle}" Text="Shown by the Tasks widget (turn it on under Widgets). Click a task on the desktop to tick it off." />
+                    </StackPanel>
+                    <Button Style="{StaticResource SecondaryButton}" Content="Clear completed" Click="OnClearDone" HorizontalAlignment="Right" VerticalAlignment="Top" />
+                </Grid>
+                <Border DockPanel.Dock="Top" Style="{StaticResource Card}" Padding="12" Margin="0,0,8,12">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Content="Add" Click="OnAddTask" Margin="10,0,0,0" />
+                        <TextBox x:Name="NewTaskBox" Height="32" VerticalContentAlignment="Center" Padding="8,0" MaxLength="120" KeyDown="OnNewTaskKey" BorderBrush="{DynamicResource LineBrush}" />
+                    </DockPanel>
+                </Border>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Border Style="{StaticResource Card}" Margin="0,0,8,12">
+                        <StackPanel x:Name="TasksPanel" />
+                    </Border>
+                </ScrollViewer>
+            </DockPanel>
+
+            <!-- General -->
+            <DockPanel x:Name="GeneralPage" Margin="32,26,24,20" Visibility="Collapsed">
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,8,18">
+                    <TextBlock Style="{StaticResource PageTitle}" Text="General" />
+                    <TextBlock Style="{StaticResource PageSubtitle}" Text="The wallpaper, performance, pausing and startup." />
+                </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="0,0,8,12">
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                            <StackPanel>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource SettingLabel}" Text="Language" />
+                                    <TextBlock Style="{StaticResource SettingHint}" Text="The language of Chao Desk's windows, menus and desktop widgets." />
+                                </StackPanel>
+                                <ComboBox x:Name="LanguageCombo" Style="{StaticResource FieldCombo}" SelectionChanged="OnLanguageChanged" />
+                            </Grid>
+                            <Separator Style="{StaticResource RowSeparator}" />
+                            <Grid Style="{StaticResource SettingRow}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource SettingLabel}" Text="Appearance" />
+                                    <TextBlock Style="{StaticResource SettingHint}" Text="Light, dark, or the same as Windows." />
+                                </StackPanel>
+                                <ComboBox x:Name="ThemeCombo" Style="{StaticResource FieldCombo}" SelectionChanged="OnThemeChanged" />
+                            </Grid>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                            <Grid Style="{StaticResource SettingRow}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource SettingLabel}" Text="Show the interactive wallpaper" />
+                                    <TextBlock Style="{StaticResource SettingHint}" Text="Off: only the tools run, and your Windows wallpaper shows." />
+                                </StackPanel>
+                                <CheckBox x:Name="WallpaperCheck" Style="{StaticResource ToggleSwitch}" Click="OnGeneralChanged" />
+                            </Grid>
+                            <Separator Style="{StaticResource RowSeparator}" />
+                            <Grid Style="{StaticResource SettingRow}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource SettingLabel}" Text="Keep the widgets without the wallpaper" />
+                                    <TextBlock Style="{StaticResource SettingHint}" Text="Clock, calendar and weather stay on the desktop with the wallpaper off." />
+                                </StackPanel>
+                                <CheckBox x:Name="DesktopWidgetsCheck" Style="{StaticResource ToggleSwitch}" Click="OnGeneralChanged" />
+                            </Grid>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="Performance" />
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Frame rate limit" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="30 FPS is smooth for a wallpaper and uses half the power of 60." />
+                                    </StackPanel>
+                                    <ComboBox x:Name="FpsCombo" Style="{StaticResource FieldCombo}" SelectionChanged="OnGeneralChanged" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Render scale" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Lower is lighter on the graphics card; 75 % looks almost the same." />
+                                    </StackPanel>
+                                    <ComboBox x:Name="ScaleCombo" Style="{StaticResource FieldCombo}" SelectionChanged="OnGeneralChanged" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Quality" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Auto lowers effects if frames take too long." />
+                                    </StackPanel>
+                                    <ComboBox x:Name="QualityCombo" Style="{StaticResource FieldCombo}" SelectionChanged="OnGeneralChanged" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="Pausing" />
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Pause when a window is maximised" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Full-screen apps always pause the wallpaper on their display." />
+                                    </StackPanel>
+                                    <CheckBox x:Name="PauseMaxCheck" Style="{StaticResource ToggleSwitch}" Click="OnGeneralChanged" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Pause on battery" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Battery saver always pauses the wallpaper." />
+                                    </StackPanel>
+                                    <CheckBox x:Name="PauseBatteryCheck" Style="{StaticResource ToggleSwitch}" Click="OnGeneralChanged" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="Interaction and startup" />
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Enable mouse interaction" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Clicks on empty desktop space reach the wallpaper, e.g. to feed the koi." />
+                                    </StackPanel>
+                                    <CheckBox x:Name="MouseCheck" Style="{StaticResource ToggleSwitch}" Click="OnGeneralChanged" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Start with Windows" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Launch Chao Desk when you sign in." />
+                                    </StackPanel>
+                                    <CheckBox x:Name="StartupCheck" Style="{StaticResource ToggleSwitch}" Click="OnGeneralChanged" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Online info" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Exchange rates, holidays and weather for the widgets, every 30 minutes." />
+                                    </StackPanel>
+                                    <CheckBox x:Name="OnlineCheck" Style="{StaticResource ToggleSwitch}" Click="OnGeneralChanged" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Weather city" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="For example 北京 or Sydney; empty: no weather. Enter applies." />
+                                    </StackPanel>
+                                    <TextBox x:Name="CityBox" Style="{StaticResource FieldText}" Width="160" MaxLength="60" LostFocus="OnGeneralChanged" KeyDown="OnCityKey" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="Translation" />
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Translate into" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="For the Translate button and Ctrl+T. Automatic: Chinese ↔ English." />
+                                    </StackPanel>
+                                    <ComboBox x:Name="TranslateTargetCombo" Style="{StaticResource FieldCombo}" SelectionChanged="OnTranslateChanged" />
+                                </Grid>
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Translation service" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Free, no account. Text is sent only when you translate." />
+                                    </StackPanel>
+                                    <ComboBox x:Name="TranslateEngineCombo" Style="{StaticResource FieldCombo}" SelectionChanged="OnTranslateChanged" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="Updates" />
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock x:Name="UpdateTitle" Style="{StaticResource SettingLabel}" />
+                                        <TextBlock x:Name="UpdateStatusText" Style="{StaticResource SettingHint}" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0">
+                                        <Button x:Name="UpdateCancelButton" Style="{StaticResource SecondaryButton}" Content="Cancel" Click="OnCancelUpdate" Margin="0,0,8,0" Visibility="Collapsed" />
+                                        <Button x:Name="UpdateButton" Style="{StaticResource SecondaryButton}" Click="OnUpdateButton" />
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock x:Name="UpdateNotesText" Style="{StaticResource SettingHint}" Margin="0,0,0,12" MaxHeight="180" TextTrimming="CharacterEllipsis" Visibility="Collapsed" />
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Check for updates automatically" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Once a day. Nothing is downloaded until you choose to install." />
+                                    </StackPanel>
+                                    <CheckBox x:Name="AutoUpdateCheck" Style="{StaticResource ToggleSwitch}" Click="OnGeneralChanged" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+
+            <!-- Diagnostics -->
+            <DockPanel x:Name="DiagnosticsPage" Margin="32,26,24,20" Visibility="Collapsed">
+                <Grid DockPanel.Dock="Top" Margin="0,0,8,18">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource PageTitle}" Text="Diagnostics" />
+                        <TextBlock Style="{StaticResource PageSubtitle}" Text="What Chao Desk sees on this computer." />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                        <Button x:Name="DevToolsButton" Style="{StaticResource SecondaryButton}" Content="Open DevTools" Click="OnOpenDevTools" Margin="0,0,8,0" />
+                        <Button Style="{StaticResource SecondaryButton}" Content="Reload wallpaper" Click="OnReload" Margin="0,0,8,0" />
+                        <Button Style="{StaticResource SecondaryButton}" Content="Open log folder" Click="OnOpenLogs" />
+                    </StackPanel>
+                </Grid>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Border Style="{StaticResource Card}" Margin="0,0,8,12">
+                        <StackPanel x:Name="DiagnosticsPanel" />
+                    </Border>
+                </ScrollViewer>
+            </DockPanel>
+        </Grid>
+    </Grid>
+</Window>

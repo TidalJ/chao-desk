@@ -1,0 +1,27 @@
+<!-- Light theme: plain white surfaces, neutral greys, one indigo accent. Every window refers to these keys
+     with DynamicResource, so switching dictionaries (ThemeManager) recolours open windows. Dark.xaml has the same keys. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="PaperBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="SidebarBrush" Color="#F6F7F8" />
+    <SolidColorBrush x:Key="CardBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="InkBrush" Color="#1F2328" />
+    <SolidColorBrush x:Key="MutedBrush" Color="#6A6F78" />
+    <SolidColorBrush x:Key="LineBrush" Color="#E5E7EB" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#4C5BD4" />
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#3F4CBC" />
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="#EEF0FC" />
+    <SolidColorBrush x:Key="DangerBrush" Color="#C2413B" />
+    <SolidColorBrush x:Key="NavSelectedBrush" Color="#EBECF0" />
+    <SolidColorBrush x:Key="HoverBrush" Color="#0B000000" />
+    <SolidColorBrush x:Key="ControlBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="ControlHoverBrush" Color="#F4F5F7" />
+    <SolidColorBrush x:Key="ControlPressedBrush" Color="#EAEBEE" />
+    <SolidColorBrush x:Key="ToggleTrackBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="ToggleBorderBrush" Color="#8A8F98" />
+    <SolidColorBrush x:Key="ToggleThumbBrush" Color="#5F646D" />
+    <SolidColorBrush x:Key="FooterBrush" Color="#FAFAFB" />
+    <SolidColorBrush x:Key="PlaceholderBrush" Color="#A0A4AB" />
+    <SolidColorBrush x:Key="TileBrush" Color="#F1F2F4" />
+    <SolidColorBrush x:Key="PreviewBrush" Color="#FAFAFB" />
+</ResourceDictionary>

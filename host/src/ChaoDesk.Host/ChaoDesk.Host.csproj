@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>ChaoDesk</AssemblyName>
+    <RootNamespace>ChaoDesk.Host</RootNamespace>
+    <Version>1.0.0</Version>
+    <Product>Chao Desk</Product>
+    <ApplicationIcon>Assets\chaodesk.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="H.NotifyIcon.Wpf" Version="2.3.2" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
+    <PackageReference Include="Serilog" Version="4.4.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\chaodesk.ico" />
+    <EmbeddedResource Include="Launcher\pinyin.txt" />
+    <EmbeddedResource Include="Localization\zh\*.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ChaoDesk.Host.Tests" />
+  </ItemGroup>
+
+  <!-- PP-OCRv5 models (fetched by build.ps1 from models/ocr/models.json), shipped in the app's ocr folder. -->
+  <ItemGroup>
+    <None Include="..\..\..\models\ocr\*.onnx;..\..\..\models\ocr\*.txt" Link="ocr\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

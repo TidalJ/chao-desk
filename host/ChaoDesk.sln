@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{71DD1CE9-93ED-46C2-8D8B-A0B23461B0B0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChaoDesk.Host", "src\ChaoDesk.Host\ChaoDesk.Host.csproj", "{B6D0976C-85BA-4A13-BA22-4438F5C23989}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{17773BD5-BAF4-471A-82E8-1ABC5EE72D92}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChaoDesk.Host.Tests", "tests\ChaoDesk.Host.Tests\ChaoDesk.Host.Tests.csproj", "{C39FDDCF-9885-4775-95A3-2F87DC7BDD48}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B6D0976C-85BA-4A13-BA22-4438F5C23989}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6D0976C-85BA-4A13-BA22-4438F5C23989}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6D0976C-85BA-4A13-BA22-4438F5C23989}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6D0976C-85BA-4A13-BA22-4438F5C23989}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C39FDDCF-9885-4775-95A3-2F87DC7BDD48}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C39FDDCF-9885-4775-95A3-2F87DC7BDD48}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C39FDDCF-9885-4775-95A3-2F87DC7BDD48}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C39FDDCF-9885-4775-95A3-2F87DC7BDD48}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{B6D0976C-85BA-4A13-BA22-4438F5C23989} = {71DD1CE9-93ED-46C2-8D8B-A0B23461B0B0}
+		{C39FDDCF-9885-4775-95A3-2F87DC7BDD48} = {17773BD5-BAF4-471A-82E8-1ABC5EE72D92}
+	EndGlobalSection
+EndGlobal

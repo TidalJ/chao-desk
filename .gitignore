@@ -1,0 +1,29 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+TestResults/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Build output
+/models/ocr/*.onnx
+/models/ocr/*.txt
+/artifacts/
+/dist/
+/installer/Output/
+
+# OS / editor
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/
+
+# Local notes and development scripts (not published)
+/CLAUDE.md
+/docs/decisions.md
+/tools/

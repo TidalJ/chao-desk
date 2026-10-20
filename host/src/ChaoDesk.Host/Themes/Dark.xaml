@@ -1,0 +1,26 @@
+<!-- Dark theme: the same keys as Light.xaml — neutral graphite (not black) with the indigo accent lifted for contrast. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="PaperBrush" Color="#232428" />
+    <SolidColorBrush x:Key="SidebarBrush" Color="#1E1F22" />
+    <SolidColorBrush x:Key="CardBrush" Color="#2B2C30" />
+    <SolidColorBrush x:Key="InkBrush" Color="#E8E9EC" />
+    <SolidColorBrush x:Key="MutedBrush" Color="#9A9EA7" />
+    <SolidColorBrush x:Key="LineBrush" Color="#38393E" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#8E98F2" />
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#A3ABF5" />
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="#30334F" />
+    <SolidColorBrush x:Key="DangerBrush" Color="#EF8A80" />
+    <SolidColorBrush x:Key="NavSelectedBrush" Color="#2E2F34" />
+    <SolidColorBrush x:Key="HoverBrush" Color="#14FFFFFF" />
+    <SolidColorBrush x:Key="ControlBrush" Color="#2E2F33" />
+    <SolidColorBrush x:Key="ControlHoverBrush" Color="#36373C" />
+    <SolidColorBrush x:Key="ControlPressedBrush" Color="#3E3F45" />
+    <SolidColorBrush x:Key="ToggleTrackBrush" Color="#2E2F33" />
+    <SolidColorBrush x:Key="ToggleBorderBrush" Color="#8A8F98" />
+    <SolidColorBrush x:Key="ToggleThumbBrush" Color="#C2C5CC" />
+    <SolidColorBrush x:Key="FooterBrush" Color="#1F2023" />
+    <SolidColorBrush x:Key="PlaceholderBrush" Color="#6E727A" />
+    <SolidColorBrush x:Key="TileBrush" Color="#35363B" />
+    <SolidColorBrush x:Key="PreviewBrush" Color="#26272B" />
+</ResourceDictionary>
