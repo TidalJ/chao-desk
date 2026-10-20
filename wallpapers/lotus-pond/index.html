@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lotus Pond</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #2c4038; }
+    /* The still photo shows until the first frame (and stays if WebGL2 is unavailable). */
+    body { background: #2c4038 url("assets/celadon.jpg") center / cover no-repeat; }
+    body.pond-ready { background-image: none; }
+    #pond { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
+    body.no-webgl #pond { display: none; }
+  </style>
+  <script src="assets/fish-koi.js" defer></script>
+  <script src="assets/fish-fancy.js" defer></script>
+  <script src="pond-art.js" defer></script>
+  <script src="pond.js" defer></script>
+  <script src="lotus-widgets.js" defer></script>
+  <script src="lotus-bridge.js" defer></script>
+</head>
+<body>
+  <canvas id="pond" aria-label="Koi pond"></canvas>
+</body>
+</html>

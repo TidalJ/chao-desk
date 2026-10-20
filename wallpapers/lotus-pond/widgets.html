@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Chao Desk widgets</title>
+  <!-- The widgets without the pond (Settings → General → "Keep the widgets without the wallpaper"): the user's
+       Windows wallpaper fills the page and lotus-widgets.js draws the same widgets over it. -->
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+    #desk { position: fixed; inset: 0; background-position: center; background-repeat: no-repeat; background-size: cover; }
+  </style>
+  <script src="lotus-widgets.js" defer></script>
+  <script src="widgets-bridge.js" defer></script>
+</head>
+<body>
+  <div id="desk"></div>
+</body>
+</html>

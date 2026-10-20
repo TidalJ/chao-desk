@@ -1,0 +1,137 @@
+{
+  "id": "lotus-pond",
+  "name": "Lotus Pond",
+  "author": "Chao Desk",
+  "version": "1.0.0",
+  "entry": "index.html",
+  "preview": "preview.png",
+  "background": "#2c4038",
+  "properties": {
+    "scene": {
+      "type": "combo",
+      "label": "Pond",
+      "options": [
+        "Celadon basin",
+        "Wisteria garden",
+        "Summer lotus",
+        "Autumn leaves"
+      ],
+      "default": "Celadon basin"
+    },
+    "weather": {
+      "type": "combo",
+      "label": "Weather",
+      "options": [
+        "Follow real weather",
+        "Sunny",
+        "Cloudy",
+        "Rain",
+        "Snow"
+      ],
+      "default": "Follow real weather"
+    },
+    "timeOfDay": {
+      "type": "combo",
+      "label": "Day and night",
+      "options": [
+        "Follow clock",
+        "Day",
+        "Night"
+      ],
+      "default": "Follow clock"
+    },
+    "koi": {
+      "type": "slider",
+      "label": "Koi",
+      "min": 0,
+      "max": 24,
+      "step": 1,
+      "default": 10
+    },
+    "koiSize": {
+      "type": "slider",
+      "label": "Koi size",
+      "min": 0.6,
+      "max": 1.6,
+      "step": 0.1,
+      "default": 1
+    },
+    "speed": {
+      "type": "slider",
+      "label": "Swimming speed",
+      "min": 0.3,
+      "max": 2,
+      "step": 0.1,
+      "default": 1
+    },
+    "rainAmount": {
+      "type": "slider",
+      "label": "Rain amount",
+      "min": 0,
+      "max": 1,
+      "step": 0.05,
+      "default": 0.5
+    },
+    "snowAmount": {
+      "type": "slider",
+      "label": "Snow amount",
+      "min": 0,
+      "max": 1,
+      "step": 0.05,
+      "default": 0.5
+    },
+    "floating": {
+      "type": "bool",
+      "label": "Floating lily pads (summer)",
+      "default": false
+    },
+    "drift": {
+      "type": "bool",
+      "label": "Drifting petals and leaves",
+      "default": false
+    },
+    "fireflies": {
+      "type": "bool",
+      "label": "Fireflies at night",
+      "default": true
+    },
+    "clock": {
+      "type": "combo",
+      "label": "Card position",
+      "options": [
+        "Top right",
+        "Top left",
+        "Bottom right",
+        "Bottom left",
+        "Off"
+      ],
+      "default": "Top right"
+    },
+    "clockLanguage": {
+      "type": "combo",
+      "label": "Card language",
+      "options": [
+        "Same as Chao Desk",
+        "中文",
+        "English"
+      ],
+      "default": "Same as Chao Desk"
+    },
+    "clock24": {
+      "type": "bool",
+      "label": "24-hour clock",
+      "default": true
+    },
+    "bocLink": {
+      "type": "bool",
+      "label": "Show the boc.cn link on the rate card",
+      "default": false
+    },
+    "worldClock": {
+      "type": "text",
+      "label": "World clock cities (comma separated, e.g. 北京, 悉尼, 伦敦)",
+      "default": "北京, 悉尼",
+      "maxLength": 60
+    }
+  }
+}
