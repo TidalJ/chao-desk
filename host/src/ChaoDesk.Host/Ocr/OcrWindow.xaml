@@ -1,0 +1,103 @@
+<Window x:Class="ChaoDesk.Host.Ocr.OcrWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Recognised text — Chao Desk"
+        Width="1000" Height="620" MinWidth="560" MinHeight="360"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource PaperBrush}"
+        FontFamily="Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI"
+        FontSize="13"
+        Foreground="{DynamicResource InkBrush}"
+        TextOptions.TextFormattingMode="Display"
+        UseLayoutRounding="True">
+    <DockPanel>
+        <!-- Tools -->
+        <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1" Padding="16,10,16,10">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button x:Name="PinButton" Style="{StaticResource SecondaryButton}" Content="Pin picture" Margin="8,0,0,0" Click="OnPin" ToolTip="Keep the picture on top of the screen" />
+                    <Button x:Name="TranslateButton" Style="{StaticResource SecondaryButton}" Content="Translate" Margin="8,0,0,0" Click="OnTranslate" ToolTip="Show the translation under the text (Ctrl+T); again to hide it" IsEnabled="False" />
+                    <Button x:Name="CopyButton" Style="{StaticResource SecondaryButton}" Content="Copy all" Margin="8,0,0,0" Click="OnCopyAll" ToolTip="Copy all the text (Ctrl+Shift+C)" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Language" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <ComboBox x:Name="LanguageCombo" Style="{StaticResource FieldCombo}" Width="200" SelectionChanged="OnLanguageChanged" />
+                    <CheckBox x:Name="MergeCheck" Style="{StaticResource ToggleSwitch}" Margin="22,0,8,0" Click="OnMergeToggled" />
+                    <TextBlock Text="Join lines into paragraphs" VerticalAlignment="Center" />
+                    <CheckBox x:Name="AutoTranslateCheck" Style="{StaticResource ToggleSwitch}" Margin="22,0,8,0" Click="OnAutoTranslateToggled" />
+                    <TextBlock x:Name="AutoTranslateLabel" Text="Translate automatically" VerticalAlignment="Center" ToolTip="Translate the text as soon as it is recognised (the text is sent to the translation service)" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Status -->
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Padding="16,7,16,8" Background="{DynamicResource FooterBrush}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" FontSize="11.5" Foreground="{DynamicResource MutedBrush}" Margin="16,0,0,0"
+                           Text="Drag over the picture to pick words · Ctrl+T translate · Esc close"
+                           ToolTip="Drag over the picture to pick words · double-click a word picks its line · Ctrl+C copies the picked words · Ctrl+Shift+C copies all the text · Ctrl+T shows the translation · Esc closes" />
+                <TextBlock x:Name="StatusText" FontSize="11.5" Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </Border>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="200" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" MinWidth="200" />
+            </Grid.ColumnDefinitions>
+
+            <!-- The picture, with a box over every recognised word -->
+            <Border Background="{DynamicResource PreviewBrush}">
+                <Grid Margin="16">
+                    <Viewbox x:Name="PictureBox" Stretch="Uniform" StretchDirection="DownOnly">
+                        <Grid x:Name="Picture" Background="Transparent" Cursor="IBeam"
+                              MouseLeftButtonDown="OnPictureDown" MouseMove="OnPictureMove" MouseLeftButtonUp="OnPictureUp">
+                            <Image x:Name="PictureImage" RenderOptions.BitmapScalingMode="HighQuality" />
+                            <Canvas x:Name="Boxes" IsHitTestVisible="False" />
+                            <Canvas IsHitTestVisible="False">
+                                <Rectangle x:Name="DragBox" Visibility="Collapsed" StrokeThickness="1" Stroke="{DynamicResource AccentBrush}" Fill="#184C5BD4" />
+                            </Canvas>
+                        </Grid>
+                    </Viewbox>
+                    <TextBlock x:Name="BusyText" Text="Recognising…" HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Padding="12,6" Background="{DynamicResource CardBrush}" Foreground="{DynamicResource MutedBrush}" />
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Center" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext"
+                          Background="{DynamicResource LineBrush}" ShowsPreview="False" />
+
+            <!-- The text (editable; selecting words on the picture selects them here) and, once translated, its translation under it -->
+            <Grid x:Name="TextColumn" Grid.Column="2" Background="{DynamicResource CardBrush}">
+                <Grid.RowDefinitions>
+                    <RowDefinition x:Name="OriginalRow" Height="*" MinHeight="80" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition x:Name="TranslationRow" Height="0" />
+                </Grid.RowDefinitions>
+                <DockPanel>
+                    <DockPanel x:Name="OriginalHeader" DockPanel.Dock="Top" Margin="16,10,12,0" Visibility="Collapsed">
+                        <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Content="Copy" Padding="10,3" Click="OnCopyAll" ToolTip="Copy all the text (Ctrl+Shift+C)" />
+                        <TextBlock Text="Recognised text" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <TextBox x:Name="TextOut" AcceptsReturn="True" TextWrapping="Wrap" BorderThickness="0" Padding="16,14,16,14"
+                             VerticalScrollBarVisibility="Auto" FontSize="14" Background="Transparent"
+                             FontFamily="Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI" TextChanged="OnTextEdited" />
+                </DockPanel>
+                <GridSplitter x:Name="TranslationSplitter" Grid.Row="1" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Center" ResizeBehavior="PreviousAndNext"
+                              Background="{DynamicResource LineBrush}" ShowsPreview="False" Visibility="Collapsed" />
+                <DockPanel x:Name="TranslationPane" Grid.Row="2" Visibility="Collapsed" Background="{DynamicResource PreviewBrush}">
+                    <DockPanel DockPanel.Dock="Top" Margin="16,10,12,0">
+                        <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Content="Copy" Padding="10,3" Click="OnCopyTranslation" ToolTip="Copy the translation" />
+                        <Button x:Name="RetranslateButton" DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Content="Translate again" Padding="10,3" Margin="0,0,8,0"
+                                Click="OnRetranslate" Visibility="Collapsed" ToolTip="The text was changed after it was translated" />
+                        <TextBlock x:Name="TranslationTitle" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    </DockPanel>
+                    <TextBox x:Name="TranslationOut" IsReadOnly="True" IsReadOnlyCaretVisible="False" TextWrapping="Wrap" BorderThickness="0" Padding="16,10,16,14"
+                             VerticalScrollBarVisibility="Auto" FontSize="14" Background="Transparent"
+                             FontFamily="Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI" />
+                </DockPanel>
+            </Grid>
+        </Grid>
+    </DockPanel>
+</Window>

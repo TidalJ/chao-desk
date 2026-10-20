@@ -1,0 +1,111 @@
+<Window x:Class="ChaoDesk.Host.Clips.ClipboardWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Chao Desk Clipboard"
+        Width="880" Height="560"
+        WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True" ShowActivated="True"
+        Background="{DynamicResource PaperBrush}"
+        FontFamily="Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI"
+        FontSize="13"
+        Foreground="{DynamicResource InkBrush}"
+        TextOptions.TextFormattingMode="Display"
+        UseLayoutRounding="True">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0" ResizeBorderThickness="0" GlassFrameThickness="0,0,0,1" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <DockPanel x:Name="Root">
+        <!-- Search box, filters, preview, move and pin buttons -->
+        <Grid x:Name="Header" DockPanel.Dock="Top" Height="56" Margin="20,0,14,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Text="&#xE77F;" FontSize="17" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"
+                       Background="Transparent" Padding="0,8,6,8" Cursor="SizeAll" ToolTip="Drag to move" MouseLeftButtonDown="OnMoveAreaMouseDown" />
+            <TextBlock x:Name="Placeholder" Grid.Column="1" Margin="14,0,0,0" FontSize="18" VerticalAlignment="Center" IsHitTestVisible="False"
+                       Foreground="{DynamicResource PlaceholderBrush}" Text="Search clipboard history" />
+            <TextBox x:Name="QueryBox" Grid.Column="1" Margin="12,0,8,0" FontSize="18" Style="{StaticResource PopupSearchBox}" TextChanged="OnQueryChanged" />
+            <StackPanel x:Name="FilterPanel" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" />
+        </Grid>
+
+        <!-- Footer (drag it to move the window) -->
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Padding="20,7,18,8" Background="{DynamicResource FooterBrush}"
+                Cursor="SizeAll" MouseLeftButtonDown="OnMoveAreaMouseDown">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" FontSize="11.5" Foreground="{DynamicResource MutedBrush}" Margin="16,0,0,0"
+                           Text="Enter paste · Ctrl+T translate · right-click for more"
+                           ToolTip="Enter paste · Shift+Enter paste as plain text · Ctrl+C copy · Ctrl+T translate (pictures: recognise text) · Ctrl+P pin · Del remove · Tab filter · Ctrl+1…9 paste that entry" />
+                <TextBlock x:Name="StatusText" FontSize="11.5" Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </Border>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="420" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,1,0" Padding="0,6">
+                <Grid>
+                    <ListBox x:Name="Results" Style="{StaticResource PopupList}" ItemContainerStyle="{StaticResource PopupItem}"
+                             SelectionChanged="OnSelectionChanged" PreviewMouseLeftButtonDown="OnResultMouseDown">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Height="54">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="40" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Width="36" Height="36" CornerRadius="6" Background="{DynamicResource TileBrush}" VerticalAlignment="Center" ClipToBounds="True">
+                                        <Grid>
+                                            <TextBlock Text="{Binding Glyph}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"
+                                                       Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality" />
+                                        </Grid>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Margin="12,0,8,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" FontSize="14" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Subtitle}" FontSize="11.5" Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis" Margin="0,1,0,0" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="2" Text="{Binding PinGlyph}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="13"
+                                               Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,2,0" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <TextBlock x:Name="EmptyText" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" Margin="30"
+                               Foreground="{DynamicResource MutedBrush}" Visibility="Collapsed" />
+                </Grid>
+            </Border>
+
+            <!-- Preview of the selected entry -->
+            <Border x:Name="PreviewPanel" Grid.Column="1" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Background="{DynamicResource PreviewBrush}">
+                <Grid Margin="18,14,18,12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" MinHeight="60" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition x:Name="TranslationRow" Height="0" />
+                    </Grid.RowDefinitions>
+                    <!-- Read-only but selectable: select part of the text and Ctrl+C (or right-click) copies just that -->
+                    <TextBox x:Name="PreviewText" IsReadOnly="True" IsReadOnlyCaretVisible="False" BorderThickness="0" Background="Transparent" TextWrapping="Wrap" FontSize="13"
+                             FontFamily="Cascadia Mono, Consolas, Microsoft YaHei UI" VerticalScrollBarVisibility="Auto" />
+                    <!-- Ctrl+T: the translation under the text -->
+                    <GridSplitter x:Name="TranslationSplitter" Grid.Row="1" Height="9" HorizontalAlignment="Stretch" VerticalAlignment="Center" ResizeBehavior="PreviousAndNext"
+                                  Background="Transparent" ShowsPreview="False" Visibility="Collapsed" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,4,0,4" />
+                    <DockPanel x:Name="TranslationPane" Grid.Row="2" Visibility="Collapsed">
+                        <TextBlock x:Name="TranslationTitle" DockPanel.Dock="Top" FontSize="11.5" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}"
+                                   Margin="0,4,0,6" TextTrimming="CharacterEllipsis" />
+                        <TextBox x:Name="TranslationText" IsReadOnly="True" IsReadOnlyCaretVisible="False" BorderThickness="0" Background="Transparent" TextWrapping="Wrap" FontSize="13"
+                                 FontFamily="Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI" VerticalScrollBarVisibility="Auto" />
+                    </DockPanel>
+                    <!-- A copied file: the same viewers as Quick Look (pictures, PDF, documents, video, folders) -->
+                    <ContentControl x:Name="PreviewFile" Grid.RowSpan="3" Focusable="False" Visibility="Collapsed" />
+                    <Image x:Name="PreviewImage" Grid.RowSpan="3" Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           RenderOptions.BitmapScalingMode="HighQuality" />
+                </Grid>
+            </Border>
+        </Grid>
+    </DockPanel>
+</Window>
