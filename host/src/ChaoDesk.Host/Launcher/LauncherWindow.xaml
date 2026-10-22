@@ -22,8 +22,11 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <Path Width="18" Height="18" Stretch="Uniform" Stroke="{DynamicResource MutedBrush}" StrokeThickness="2" VerticalAlignment="Center"
-                  Data="M 10,2 A 8,8 0 1 1 9.99,2 Z M 16,16 L 22,22" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+            <!-- The search icon (and the footer) move the window, as in the clipboard -->
+            <Border Background="Transparent" Padding="0,10" Cursor="SizeAll" ToolTip="Drag to move" VerticalAlignment="Center" MouseLeftButtonDown="OnMoveAreaMouseDown">
+                <Path Width="18" Height="18" Stretch="Uniform" Stroke="{DynamicResource MutedBrush}" StrokeThickness="2"
+                      Data="M 10,2 A 8,8 0 1 1 9.99,2 Z M 16,16 L 22,22" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+            </Border>
             <TextBlock x:Name="Placeholder" Grid.Column="1" Margin="14,0,0,0" FontSize="20" VerticalAlignment="Center" IsHitTestVisible="False"
                        Foreground="{DynamicResource PlaceholderBrush}" Text="Search apps and files" />
             <TextBox x:Name="QueryBox" Grid.Column="1" Margin="12,0,8,0" Style="{StaticResource PopupSearchBox}" TextChanged="OnQueryChanged" />
@@ -31,7 +34,8 @@
         </Grid>
 
         <!-- Footer: status and keys -->
-        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Padding="20,7,18,8" Background="{DynamicResource FooterBrush}">
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Padding="20,7,18,8" Background="{DynamicResource FooterBrush}"
+                Cursor="SizeAll" MouseLeftButtonDown="OnMoveAreaMouseDown">
             <DockPanel>
                 <TextBlock x:Name="ClearHistoryLink" DockPanel.Dock="Right" Text="Clear history" FontSize="11.5" Margin="16,0,0,0" Cursor="Hand"
                            Foreground="{DynamicResource InkBrush}" TextDecorations="Underline" Visibility="Collapsed"
@@ -45,9 +49,10 @@
         <!-- A fixed height: results and previews of any size never move or resize the window. -->
         <Border x:Name="ResultsHost" Height="480" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Visibility="Collapsed">
           <Grid>
+            <!-- The list keeps its width; with the details off the window is just the list. -->
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="640" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <ListBox x:Name="Results" Style="{StaticResource PopupList}" ItemContainerStyle="{StaticResource PopupItem}" Margin="0,6"
                      PreviewMouseLeftButtonDown="OnResultMouseDown" PreviewMouseRightButtonDown="OnResultRightDown" SelectionChanged="OnSelectionChanged">
@@ -98,8 +103,10 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
+            <TextBlock x:Name="NoResults" Text="No matches" FontSize="13" Foreground="{DynamicResource MutedBrush}" IsHitTestVisible="False"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
             <!-- Details of the selected result: a preview for files, facts for apps and commands -->
-            <Border x:Name="PreviewHost" Grid.Column="1" Width="440" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1,0,0,0" Background="{DynamicResource PreviewBrush}">
+            <Border x:Name="PreviewHost" Grid.Column="1" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1,0,0,0" Background="{DynamicResource PreviewBrush}">
                 <DockPanel>
                     <Border DockPanel.Dock="Top" Padding="14,9,10,8" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1">
                         <StackPanel>

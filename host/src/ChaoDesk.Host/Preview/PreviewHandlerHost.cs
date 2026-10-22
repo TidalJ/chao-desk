@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using Serilog;
 using static ChaoDesk.Host.Desktop.NativeMethods;
@@ -12,6 +13,14 @@ namespace ChaoDesk.Host.Preview;
 /// Hosts a Windows preview handler — the same component Explorer's preview pane uses (Word, Excel, PowerPoint,
 /// Outlook messages, fonts, …, whatever the installed apps register) — in a child window.
 /// </summary>
+/// <remarks>
+/// Starting a handler can take seconds (Office starts its server), so every handler call runs on one background STA
+/// thread with its own message loop, never on the UI thread. The UI thread owns only an empty container window; the
+/// handler draws into an inner window that the background thread creates inside it, hidden until the preview is
+/// ready (a hidden window takes no input, so the UI never waits for a busy handler). Nothing is sent to the
+/// background thread synchronously: sizes are posted, and closing hides the container at once and lets the
+/// background thread tear the handler down before the container is destroyed.
+/// </remarks>
 public sealed class PreviewHandlerHost : HwndHost
 {
     private const string HandlerKey = "{8895b1c6-b41f-4c1c-a562-0d564250836f}";
@@ -20,13 +29,34 @@ public sealed class PreviewHandlerHost : HwndHost
 
     private readonly string _path;
     private readonly Guid _clsid;
-    private IntPtr _child;
+    private IntPtr _child;          // the container (UI thread)
+    private bool _started;          // UI thread
+    private volatile bool _closed;  // set on the UI thread, read on the handler thread
+
+    // Handler thread only.
+    private IntPtr _inner;
     private IPreviewHandler? _handler;
     private IStream? _stream;
-    private bool _started;
     private bool _counted; // an out-of-process handler of ours is showing (counted in _active)
 
     public event Action<Exception>? Failed;
+
+    /// <summary>The one thread every preview handler (and the warm instances below) lives on.</summary>
+    private static readonly Lazy<Dispatcher> HandlerThread = new(() =>
+    {
+        Dispatcher? dispatcher = null;
+        using var ready = new ManualResetEventSlim();
+        var thread = new Thread(() =>
+        {
+            dispatcher = Dispatcher.CurrentDispatcher;
+            ready.Set();
+            Dispatcher.Run();
+        }) { IsBackground = true, Name = "Preview handlers" };
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        ready.Wait();
+        return dispatcher!;
+    });
 
     // Office's previewers run in WINWORD/POWERPNT started as COM servers. Starting one takes seconds (PowerPoint
     // 2–3 s) and releasing the last instance stalls another 1.5 s while the server shuts down. One idle instance per
@@ -75,34 +105,53 @@ public sealed class PreviewHandlerHost : HwndHost
         return new HandleRef(this, _child); // the handler starts once the window has its real size (OnRenderSizeChanged)
     }
 
-    private void Start()
+    /// <summary>On the handler thread: the inner window, the handler, and the preview (shown once it is drawn).</summary>
+    private void Start(RECT r, Dispatcher ui)
     {
+        if (_closed) return;
         object? instance = null;
         try
         {
+            // No parent notifications: they would be sent (and wait) to the container's thread, the UI thread.
+            _inner = CreateWindowEx(WS_EX_NOPARENTNOTIFY, "static", "", WS_CHILD | WS_CLIPCHILDREN, 0, 0, r.Right, r.Bottom, _child, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+            if (_inner == IntPtr.Zero) throw new InvalidOperationException("Could not create the preview window.");
             var type = Type.GetTypeFromCLSID(_clsid, throwOnError: true)!;
             string? server = ServerProcessName(_clsid);
             var before = server == null ? [] : ProcessIds(server);
             instance = Activator.CreateInstance(type)!;
             if (server != null)
                 foreach (int pid in ProcessIds(server).Except(before)) StartedServers.Add(pid);
+            if (server != null) { _counted = true; _active++; }
+            if (_closed) { ReleaseInstance(instance); return; }
             Initialize(instance);
             _handler = (IPreviewHandler)instance;
-            GetClientRect(_child, out RECT r);
-            _handler.SetWindow(_child, ref r);
+            _handler.SetWindow(_inner, ref r);
             _handler.DoPreview();
-            if (server != null) { _counted = true; _active++; }
             KeepWarm(_clsid, type);
+            if (_closed) { Release(); return; }
+            SetWindowPos(_inner, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
         }
         catch (Exception ex)
         {
             Log.Information(ex, "Preview handler {Clsid} failed for {Path}", _clsid, _path);
-            bool owned = _handler == null; // Release() frees the handler; an instance that never became one is ours
+            if (_handler == null && instance != null) ReleaseInstance(instance); // never became the handler
             Release();
-            if (owned && instance != null && Marshal.IsComObject(instance)) Marshal.FinalReleaseComObject(instance);
-            ScheduleCleanup();
-            Failed?.Invoke(ex);
+            ui.BeginInvoke(() => Failed?.Invoke(ex));
         }
+    }
+
+    private void ReleaseInstance(object instance)
+    {
+        if (Marshal.IsComObject(instance)) Marshal.FinalReleaseComObject(instance);
+        Release();
+    }
+
+    /// <summary>On the handler thread: the container was resized.</summary>
+    private void Resize(RECT r)
+    {
+        if (_inner == IntPtr.Zero) return;
+        SetWindowPos(_inner, IntPtr.Zero, 0, 0, r.Right, r.Bottom, SWP_NOZORDER | SWP_NOACTIVATE);
+        try { _handler?.SetRect(ref r); } catch (COMException) { }
     }
 
     /// <summary>
@@ -169,17 +218,21 @@ public sealed class PreviewHandlerHost : HwndHost
     protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
     {
         base.OnRenderSizeChanged(sizeInfo);
-        if (!_started && _child != IntPtr.Zero && sizeInfo.NewSize.Width > 20 && sizeInfo.NewSize.Height > 20)
+        if (_child == IntPtr.Zero || (!_started && (sizeInfo.NewSize.Width <= 20 || sizeInfo.NewSize.Height <= 20))) return;
+        bool start = !_started;
+        _started = true;
+        // After the container got its size (render priority), hand the size to the handler thread.
+        Dispatcher.BeginInvoke(() =>
         {
-            _started = true;
-            Dispatcher.BeginInvoke(Start, System.Windows.Threading.DispatcherPriority.Render); // after the child window got the size
-            return;
-        }
-        if (_handler == null || _child == IntPtr.Zero) return;
-        GetClientRect(_child, out RECT r);
-        try { _handler.SetRect(ref r); } catch (COMException) { }
+            if (_closed || _child == IntPtr.Zero) return;
+            GetClientRect(_child, out RECT r);
+            var ui = Dispatcher;
+            if (start) HandlerThread.Value.BeginInvoke(() => Start(r, ui));
+            else HandlerThread.Value.BeginInvoke(() => Resize(r));
+        }, DispatcherPriority.Render);
     }
 
+    /// <summary>On the handler thread: unloads the handler and frees its window.</summary>
     private void Release()
     {
         if (_handler != null)
@@ -192,6 +245,11 @@ public sealed class PreviewHandlerHost : HwndHost
         {
             Marshal.FinalReleaseComObject(_stream);
             _stream = null;
+        }
+        if (_inner != IntPtr.Zero)
+        {
+            DestroyWindow(_inner);
+            _inner = IntPtr.Zero;
         }
         if (_counted)
         {
@@ -272,18 +330,39 @@ public sealed class PreviewHandlerHost : HwndHost
     /// <summary>When Chao Desk exits: let go of the warm instances and end the servers our previews started.</summary>
     public static void ShutDownServers()
     {
-        _warmTimer?.Stop();
-        _cleanupTimer?.Stop();
-        foreach (var instance in Warm.Values)
-            try { Marshal.FinalReleaseComObject(instance); } catch (Exception ex) { Log.Debug(ex, "Releasing a warm preview handler failed"); }
-        Warm.Clear();
-        EndStartedServers();
+        if (!HandlerThread.IsValueCreated) return; // no preview handler was ever used
+        try
+        {
+            HandlerThread.Value.Invoke(() =>
+            {
+                _warmTimer?.Stop();
+                _cleanupTimer?.Stop();
+                foreach (var instance in Warm.Values)
+                    try { Marshal.FinalReleaseComObject(instance); } catch (Exception ex) { Log.Debug(ex, "Releasing a warm preview handler failed"); }
+                Warm.Clear();
+                EndStartedServers();
+            }, DispatcherPriority.Send, CancellationToken.None, TimeSpan.FromSeconds(5));
+        }
+        catch (TimeoutException) { Log.Information("The preview handler thread was busy at exit"); }
     }
 
+    /// <summary>
+    /// Hides the container at once (nothing waits for the handler thread); the handler thread then unloads the
+    /// handler and frees its window, and only after that is the container destroyed.
+    /// </summary>
     protected override void DestroyWindowCore(HandleRef hwnd)
     {
-        Release();
-        DestroyWindow(hwnd.Handle);
+        _closed = true;
+        IntPtr container = hwnd.Handle;
+        SetWindowPos(container, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_HIDEWINDOW);
+        _child = IntPtr.Zero;
+        if (!HandlerThread.IsValueCreated) { DestroyWindow(container); return; }
+        var ui = Dispatcher;
+        HandlerThread.Value.BeginInvoke(() =>
+        {
+            Release();
+            ui.BeginInvoke(() => DestroyWindow(container));
+        });
     }
 
     [ComImport, Guid("8895b1c6-b41f-4c1c-a562-0d564250836f"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]

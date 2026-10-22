@@ -1061,13 +1061,13 @@ public sealed class AppHost : ISettingsHost, IDisposable
     public string TranslateEngine
     {
         get => _settings.TranslateEngine;
-        set { if (Translator.Engines.Contains(value)) { _settings.TranslateEngine = value; ScheduleSave(); } }
+        set { if (Translator.Engines.Contains(value)) { _settings.TranslateEngine = value; ScheduleSave(); _clipWindow?.ForgetTranslations(); } }
     }
 
     public string TranslateTarget
     {
         get => _settings.TranslateTarget;
-        set { if (Translator.Targets.Contains(value)) { _settings.TranslateTarget = value; ScheduleSave(); } }
+        set { if (Translator.Targets.Contains(value)) { _settings.TranslateTarget = value; ScheduleSave(); _clipWindow?.ForgetTranslations(); } }
     }
 
     /// <summary>Translates with the user's engine and target; throws when no engine could be reached.</summary>

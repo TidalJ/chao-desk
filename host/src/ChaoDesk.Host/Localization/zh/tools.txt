@@ -46,6 +46,7 @@ by date modified	按修改日期
 by size	按大小
 {0} among the best {1:N0}	{0}（在最匹配的 {1:N0} 项中）
 No files match	没有匹配的文件
+No matches	没有匹配的结果
 {0:N0} file matches{1} · {2} ms	{0:N0} 个文件匹配{1} · {2} ms
 {0:N0} files match{1} · {2} ms	{0:N0} 个文件匹配{1} · {2} ms
 Pinned {0}: it shows first when the box is empty.	已固定 {0}：搜索框为空时它显示在最前面。
@@ -207,6 +208,9 @@ Copied all the text.	已复制全部文字。
 Translated into {0} by {1}	已由 {1} 译为{0}
 The clipboard is busy; try again.	剪贴板正忙，请重试。
 Hide translation	隐藏译文
+Translate (Ctrl+T)	翻译（Ctrl+T）
+Hide translation (Ctrl+T)	隐藏译文（Ctrl+T）
+Recognise text (Ctrl+T)	识别文字（Ctrl+T）
 Translation · {0} · {1}	译文 · {0} · {1}
 Translation · {0} → {1} · {2}	译文 · {0} → {1} · {2}
 Translation hidden.	已隐藏译文。

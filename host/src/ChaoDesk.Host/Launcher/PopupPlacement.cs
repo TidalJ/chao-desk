@@ -29,6 +29,23 @@ internal static class PopupPlacement
         SetWindowPos(hwnd, IntPtr.Zero, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
     }
 
+    /// <summary>
+    /// Changes the window's width in one step, keeping its left edge (what is on the left stays put) unless the
+    /// wider window would leave the monitor's work area — then it moves left just enough.
+    /// </summary>
+    public static void SetWidthKeepingLeft(Window window, double width)
+    {
+        var hwnd = new WindowInteropHelper(window).Handle;
+        if (hwnd == IntPtr.Zero || !window.IsVisible) { window.Width = width; return; }
+        GetWindowRect(hwnd, out RECT r);
+        var info = new MONITORINFOEX { cbSize = System.Runtime.InteropServices.Marshal.SizeOf<MONITORINFOEX>() };
+        if (!GetMonitorInfo(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), ref info)) { window.Width = width; return; }
+        int w = (int)Math.Round(width * VisualTreeHelper.GetDpi(window).DpiScaleX);
+        int x = Math.Max(info.rcWork.Left, Math.Min(r.Left, info.rcWork.Right - w));
+        SetWindowPos(hwnd, IntPtr.Zero, x, r.Top, w, r.Bottom - r.Top, SWP_NOZORDER | SWP_NOACTIVATE);
+        window.Width = width; // WPF's own value (already the window's size: no second step)
+    }
+
     private const int WM_SYSCOMMAND = 0x0112;
     private const int SC_KEYMENU = 0xF100;
 

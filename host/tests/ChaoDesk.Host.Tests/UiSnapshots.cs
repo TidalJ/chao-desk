@@ -47,10 +47,17 @@ public class UiSnapshots
                         history.Add(new Clips.ClipItem { Kind = Clips.ClipKind.Text, Text = text, Source = source,
                             Hash = Clips.ClipItem.HashOf(Clips.ClipKind.Text, System.Text.Encoding.UTF8.GetBytes(text)) });
                     using var messages = new Desktop.MessageWindow();
-                    var clip = new Clips.ClipboardWindow(history, new Clips.ClipboardMonitor(messages, history), true);
+                    // A translator (never called) so the search bar shows its translate button.
+                    var clip = new Clips.ClipboardWindow(history, new Clips.ClipboardMonitor(messages, history), true)
+                    {
+                        Translate = (_, _) => Task.FromException<ChaoDesk.Host.Translate.Translation>(new NotSupportedException()),
+                    };
                     // Fill the list as Toggle would, without showing the popup.
                     typeof(Clips.ClipboardWindow).GetMethod("Refresh", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(clip, [false]);
                     Render(clip, Path.Combine(folder, $"clipboard-{language}.png"));
+                    var narrow = new Clips.ClipboardWindow(history, new Clips.ClipboardMonitor(messages, history), false);
+                    typeof(Clips.ClipboardWindow).GetMethod("Refresh", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(narrow, [false]);
+                    Render(narrow, Path.Combine(folder, $"clipboard-narrow-{language}.png"));
                     var picture = BitmapSource.Create(400, 200, 96, 96, PixelFormats.Bgra32, null, new byte[400 * 200 * 4], 400 * 4);
                     var ocr = new Ocr.OcrWindow(picture, "auto", false, false, _ => { }, (_, _, _) => { }) { Width = 1000, Height = 560 };
                     Render(ocr, Path.Combine(folder, $"ocr-{language}.png"));

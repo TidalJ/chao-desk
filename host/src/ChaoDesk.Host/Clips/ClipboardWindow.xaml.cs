@@ -54,9 +54,9 @@ public partial class ClipboardWindow : Window
     private readonly ClipboardMonitor _monitor;
     private readonly TextBlock[] _chips;
     private readonly Dictionary<string, ImageSource?> _thumbs = new();
-    private const double ListWidth = 420, FullWidth = 880;
+    private const double ListWidth = 380, FullWidth = 800; // the list column (as in the XAML), and with the preview
 
-    private readonly Border _previewButton, _pinButton;
+    private readonly Border _translateButton, _previewButton, _pinButton;
     private Preview.PreviewPane? _filePane;
     private string? _filePanePath, _pendingFile;
     private readonly System.Windows.Threading.DispatcherTimer _fileDebounce;
@@ -77,8 +77,12 @@ public partial class ClipboardWindow : Window
     /// <summary>Translates a text entry (Ctrl+T or its menu) with the user's service and target.</summary>
     public Func<string, CancellationToken, Task<Translation>>? Translate { get; init; }
 
-    private (string Id, Translation Result)? _translation; // shown in the preview under the entry's text
+    // Shown in the preview under the entry's text; Result is null while the service is still working on it.
+    private (string Id, Translation? Result)? _translation;
     private CancellationTokenSource? _translating;
+    private readonly Dictionary<string, Translation> _translated = new(); // by entry: hiding and showing again is instant
+    private int _previewToggles; // a closing preview ignores its end if it was reopened meanwhile
+    private int _imageLoads;     // only the newest picture preview is shown
 
     private string _lastQuery = "";
 
@@ -98,13 +102,18 @@ public partial class ClipboardWindow : Window
         _chips = FilterNames.Select(MakeChip).ToArray();
         foreach (var chip in _chips) FilterPanel.Children.Add(chip);
         UpdateChips();
-        _previewButton = IconButton.Create("\uE89F", "", () => { SetPreview(!PreviewOn, keepCentre: true); PreviewToggled?.Invoke(PreviewOn); QueryBox.Focus(); });
+        _previewButton = IconButton.Create("\uE89F", "", () => { SetPreview(!PreviewOn, animate: true); PreviewToggled?.Invoke(PreviewOn); QueryBox.Focus(); });
         _previewButton.Margin = new Thickness(14, 0, 0, 0);
         _pinButton = IconButton.Create("\uE718", "", () => { SetPinned(!_pinned); QueryBox.Focus(); });
-        FilterPanel.Children.Add(_previewButton);
-        FilterPanel.Children.Add(_pinButton);
+        // Ctrl+T for the mouse: translate the selected text, or read the text in the selected picture.
+        _translateButton = IconButton.Create("\uE8C1", "", () => { if (Results.SelectedItem is ClipRow r) TranslateOrRecognize(r.Item); QueryBox.Focus(); });
+        _translateButton.Margin = new Thickness(14, 0, 0, 0);
+        _previewButton.Margin = new Thickness(4, 0, 0, 0);
+        ButtonPanel.Children.Add(_translateButton);
+        ButtonPanel.Children.Add(_previewButton);
+        ButtonPanel.Children.Add(_pinButton);
         IsVisibleChanged += (_, _) => { if (!IsVisible) ReleaseFilePreview(); };
-        SetPreview(showPreview, keepCentre: false);
+        SetPreview(showPreview, animate: false);
         SetPinned(false);
         SourceInitialized += (_, _) => PopupPlacement.RoundCorners(this);
         PopupPlacement.IgnoreAltMenu(this);
@@ -197,6 +206,7 @@ public partial class ClipboardWindow : Window
         _filter = ClipFilter.All;
         UpdateChips();
         Refresh(keepSelection: false);
+        UpdateTranslateButton();
         if (!_pinned || double.IsNaN(Left)) PopupPlacement.PlaceOnActiveMonitor(this, 0.16); // a pinned window stays where it was put
         PopupPlacement.ShowActivated(this);
         Motion.Open(Root);
@@ -214,15 +224,34 @@ public partial class ClipboardWindow : Window
         if (IsVisible) StatusText.Text = pinned ? Loc.T("Pinned — double-click or Enter pastes into the window you used last; drag entries out.") : StatusText.Text;
     }
 
-    private void SetPreview(bool on, bool keepCentre)
+    /// <summary>
+    /// Shows or hides the preview column; without it the window is just the list. The window glides wider or
+    /// narrower with its left edge kept, so the list never moves, while the column fades in or out beside it.
+    /// </summary>
+    private void SetPreview(bool on, bool animate)
     {
         PreviewOn = on;
-        PreviewPanel.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
-        double width = on ? FullWidth : ListWidth;
-        if (keepCentre && !double.IsNaN(Left)) Left += (Width - width) / 2;
-        Width = width;
         IconButton.Set(_previewButton, on, null, on ? Loc.T("Hide the preview") : Loc.T("Show the preview"));
-        if (on) ShowPreview((Results.SelectedItem as ClipRow)?.Item);
+        int toggle = ++_previewToggles;
+        animate &= IsVisible;
+        if (on)
+        {
+            PreviewPanel.Visibility = Visibility.Visible;
+            ShowPreview((Results.SelectedItem as ClipRow)?.Item);
+            if (animate) { Motion.Reveal(PreviewPanel); Motion.GlideWidth(this, FullWidth); }
+            else { PreviewPanel.BeginAnimation(OpacityProperty, null); Width = FullWidth; }
+            return;
+        }
+        ReleaseFilePreview(); // a document's preview is another window: it cannot fade or be cropped, so it goes first
+        PreviewFile.Visibility = Visibility.Collapsed;
+        void Closed()
+        {
+            if (toggle != _previewToggles) return; // opened again meanwhile
+            PreviewPanel.Visibility = Visibility.Collapsed;
+            PreviewPanel.BeginAnimation(OpacityProperty, null);
+        }
+        if (animate) Motion.GlideWidth(this, ListWidth, Closed); // the edge sweeps over the column, like a drawer shutting
+        else { Width = ListWidth; Closed(); }
     }
 
     private void HideUnlessPinned()
@@ -318,8 +347,8 @@ public partial class ClipboardWindow : Window
         };
         var parts = new[] { item.Source, Ago(item.Created), detail }.Where(p => p.Length > 0);
         var row = new ClipRow { Item = item, Title = title, Subtitle = string.Join(" · ", parts), PinnedWhenMade = item.Pinned };
-        if (item.Kind == ClipKind.Image) row.Thumbnail = Thumbnail(item);
-        else if (SinglePicture(item) is { } picture) row.Thumbnail = FileThumbnail(item.Id, picture);
+        if (item.Kind == ClipKind.Image) row.Thumbnail = Thumbnail(item.Id, _history.ImagePath(item));
+        else if (SinglePicture(item) is { } picture) row.Thumbnail = Thumbnail(item.Id, picture);
         return row;
     }
 
@@ -348,27 +377,37 @@ public partial class ClipboardWindow : Window
 
     }
 
-    private ImageSource? Thumbnail(ClipItem item)
+    /// <summary>
+    /// A row's small picture: from the cache, or decoded in the background (a large photo takes a while to read)
+    /// and put on the row when ready, so switching tabs never waits for it.
+    /// </summary>
+    private ImageSource? Thumbnail(string id, string path)
     {
-        if (_thumbs.TryGetValue(item.Id, out var cached)) return cached;
-        var img = LoadImage(_history.ImagePath(item), 72);
-        _thumbs[item.Id] = img;
-        return img;
+        if (_thumbs.TryGetValue(id, out var cached)) return cached;
+        if (!_thumbsLoading.Add(id)) return null;
+        Task.Run(async () =>
+        {
+            await ThumbnailSlots.WaitAsync();
+            try { return LoadImage(path, 72); }
+            finally { ThumbnailSlots.Release(); }
+        }).ContinueWith(t =>
+        {
+            _thumbsLoading.Remove(id);
+            var img = t.IsCompletedSuccessfully ? t.Result : null;
+            _thumbs[id] = img;
+            foreach (var row in _rows) if (row.Item.Id == id) row.Thumbnail = img;
+        }, TaskScheduler.FromCurrentSynchronizationContext());
+        return null;
     }
+
+    private readonly HashSet<string> _thumbsLoading = new();
+    private static readonly SemaphoreSlim ThumbnailSlots = new(2);
 
     private static readonly HashSet<string> PictureExts = new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".tif", ".tiff", ".ico", ".heic" };
 
     /// <summary>The one picture file an entry holds (copied from Explorer), if that is what it is.</summary>
     private static string? SinglePicture(ClipItem item) =>
         item is { Kind: ClipKind.Files, Files.Length: 1 } && PictureExts.Contains(Path.GetExtension(item.Files[0])) && File.Exists(item.Files[0]) ? item.Files[0] : null;
-
-    private ImageSource? FileThumbnail(string id, string path)
-    {
-        if (_thumbs.TryGetValue(id, out var cached)) return cached;
-        var img = LoadImage(path, 72);
-        _thumbs[id] = img;
-        return img;
-    }
 
     private static BitmapImage? LoadImage(string path, int decodeWidth)
     {
@@ -389,7 +428,27 @@ public partial class ClipboardWindow : Window
     private void OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         ShowPreview((Results.SelectedItem as ClipRow)?.Item);
+        UpdateTranslateButton();
         if (Results.SelectedItem != null) Results.ScrollIntoView(Results.SelectedItem);
+    }
+
+    /// <summary>Ctrl+T and the search bar's button: pictures have their text read, text entries are translated.</summary>
+    private void TranslateOrRecognize(ClipItem item)
+    {
+        if (Recognize != null && PictureOf(item) != null) RecognizeEntry(item);
+        else if (CanTranslate(item)) _ = ToggleTranslationAsync(item);
+    }
+
+    /// <summary>The button shows only for entries it can act on (hidden, not collapsed, so the others stay put).</summary>
+    private void UpdateTranslateButton()
+    {
+        var item = (Results.SelectedItem as ClipRow)?.Item;
+        bool picture = item != null && Recognize != null && PictureOf(item) != null;
+        bool text = item != null && CanTranslate(item);
+        bool shown = text && _translation?.Id == item!.Id;
+        _translateButton.Visibility = picture || text ? Visibility.Visible : Visibility.Hidden;
+        IconButton.Set(_translateButton, shown, null,
+            picture ? Loc.T("Recognise text (Ctrl+T)") : shown ? Loc.T("Hide translation (Ctrl+T)") : Loc.T("Translate (Ctrl+T)"));
     }
 
     private void ShowPreview(ClipItem? item)
@@ -410,21 +469,31 @@ public partial class ClipboardWindow : Window
         _fileDebounce.Stop();
         ReleaseFilePreview();
         ShowTranslationPane(item != null && _translation?.Id == item.Id && PreviewText.Visibility == Visibility.Visible);
+        int load = ++_imageLoads;
         if (item == null) { PreviewText.Text = ""; PreviewImage.Source = null; return; }
         if (item.Kind == ClipKind.Image)
         {
-            PreviewImage.Source = LoadImage(_history.ImagePath(item), Math.Min(item.ImageWidth, 1200));
+            // Decoded off the UI thread (a big screenshot takes a moment); the old picture stays until then.
+            string path = _history.ImagePath(item);
+            int width = Math.Min(item.ImageWidth, 1200);
+            Task.Run(() => LoadImage(path, width)).ContinueWith(t =>
+            {
+                if (load != _imageLoads) return;
+                PreviewImage.Source = t.Result;
+                Motion.FadeIn(PreviewImage);
+            }, TaskScheduler.FromCurrentSynchronizationContext());
             return;
         }
         PreviewText.Text = item.Text.Length > 50_000 ? item.Text[..50_000] + "\n…" : item.Text;
         PreviewText.ScrollToHome();
         if (_translation is { } t && t.Id == item.Id)
         {
-            TranslationText.Text = t.Result.Text;
+            TranslationText.Text = t.Result?.Text ?? "";
             TranslationText.ScrollToHome();
-            TranslationTitle.Text = string.IsNullOrEmpty(t.Result.Source)
-                ? Loc.F("Translation · {0} · {1}", TranslationNames.Language(t.Result.Target), TranslationNames.Engine(t.Result.Engine))
-                : Loc.F("Translation · {0} → {1} · {2}", TranslationNames.Language(t.Result.Source), TranslationNames.Language(t.Result.Target), TranslationNames.Engine(t.Result.Engine));
+            TranslationTitle.Text = t.Result is not { } r ? Loc.T("Translating…")
+                : string.IsNullOrEmpty(r.Source)
+                ? Loc.F("Translation · {0} · {1}", TranslationNames.Language(r.Target), TranslationNames.Engine(r.Engine))
+                : Loc.F("Translation · {0} → {1} · {2}", TranslationNames.Language(r.Source), TranslationNames.Language(r.Target), TranslationNames.Engine(r.Engine));
         }
     }
 
@@ -524,11 +593,8 @@ public partial class ClipboardWindow : Window
             case Key.C when mods == ModifierKeys.Control && row != null && QueryBox.SelectionLength == 0:
                 if (Put(row.Item, plainText: false)) { _history.Touch(row.Item.Id); HideUnlessPinned(); }
                 break;
-            case Key.T when mods == ModifierKeys.Control && row != null && PictureOf(row.Item) != null:
-                RecognizeEntry(row.Item);
-                break;
-            case Key.T when mods == ModifierKeys.Control && row != null && CanTranslate(row.Item):
-                _ = ToggleTranslationAsync(row.Item);
+            case Key.T when mods == ModifierKeys.Control && row != null:
+                TranslateOrRecognize(row.Item);
                 break;
             case Key.P when mods == ModifierKeys.Control && row != null:
                 _history.TogglePin(row.Item.Id);
@@ -633,37 +699,64 @@ public partial class ClipboardWindow : Window
     private bool CanTranslate(ClipItem item) => Translate != null && item.Kind == ClipKind.Text && item.Text.Trim().Length > 0;
 
     /// <summary>The translation shown for this entry, if any (Enter and Ctrl+C then use it).</summary>
-    private string? TranslationOf(ClipItem item) => _translation is { } t && t.Id == item.Id ? t.Result.Text : null;
+    /// <summary>The service or target language changed: earlier translations are asked for again.</summary>
+    public void ForgetTranslations() => _translated.Clear();
 
-    /// <summary>Shows the entry's translation under its text in the preview, or hides it again.</summary>
+    private string? TranslationOf(ClipItem item) => _translation is { } t && t.Id == item.Id ? t.Result?.Text : null;
+
+    /// <summary>
+    /// Shows the entry's translation under its text in the preview, or hides it again. The pane opens at once
+    /// ("Translating…") and fills in when the service answers.
+    /// </summary>
     private async Task ToggleTranslationAsync(ClipItem item)
     {
         if (Translate == null) return;
+        _translating?.Cancel();
         if (_translation?.Id == item.Id)
         {
             _translation = null;
             ShowPreview(item);
+            UpdateTranslateButton();
             StatusText.Text = Loc.T("Translation hidden.");
             return;
         }
-        _translating?.Cancel();
+        if (_translated.TryGetValue(item.Id, out var known))
+        {
+            // Translated before (hidden since): show it again without asking the service.
+            _translation = (item.Id, known);
+            if (!PreviewOn) SetPreview(true, animate: true);
+            else ShowPreview(item);
+            UpdateTranslateButton();
+            StatusText.Text = Loc.T("Enter pastes the translation · Shift+Enter the original · Ctrl+T hides the translation");
+            return;
+        }
         var cts = _translating = new CancellationTokenSource();
-        if (!PreviewOn) SetPreview(true, keepCentre: true);
+        _translation = (item.Id, null);
+        if (!PreviewOn) SetPreview(true, animate: true);
+        else ShowPreview(item);
+        UpdateTranslateButton();
         StatusText.Text = Loc.T("Translating…");
         try
         {
             var result = await Translate(item.Text, cts.Token);
             if (cts.IsCancellationRequested) return;
             _translation = (item.Id, result);
+            if (_translated.Count >= 200) _translated.Clear();
+            _translated[item.Id] = result;
         }
         catch (OperationCanceledException) { return; }
         catch (Exception ex)
         {
             Log.Warning(ex, "Translating a clipboard entry failed");
+            if (cts.IsCancellationRequested) return;
+            _translation = null;
+            if ((Results.SelectedItem as ClipRow)?.Item.Id == item.Id) ShowPreview(item);
+            UpdateTranslateButton();
             StatusText.Text = Loc.T("Could not reach a translation service. Check the connection and try again.");
             return;
         }
         if ((Results.SelectedItem as ClipRow)?.Item.Id == item.Id) ShowPreview(item);
+        UpdateTranslateButton();
         StatusText.Text = Loc.T("Enter pastes the translation · Shift+Enter the original · Ctrl+T hides the translation");
     }
 

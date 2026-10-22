@@ -6,8 +6,8 @@ using System.Windows.Media;
 namespace ChaoDesk.Host.Launcher;
 
 /// <summary>
-/// A small squared icon button for the popups' search bars (preview pane, pin): muted when off, ink with a light
-/// fill when on. Not focusable, so typing stays in the search box.
+/// A small squared icon button for the popups' search bars (preview pane, pin): muted when off, accent on a soft
+/// accent fill when on; it dips a little while pressed. Not focusable, so typing stays in the search box.
 /// </summary>
 internal static class IconButton
 {
@@ -28,9 +28,9 @@ internal static class IconButton
         };
         Set(button, false);
         button.MouseEnter += (_, _) => { if (button.Tag is not true) button.SetResourceReference(Border.BackgroundProperty, "HoverBrush"); };
-        button.MouseLeave += (_, _) => { if (button.Tag is not true) button.Background = Brushes.Transparent; };
-        button.MouseLeftButtonDown += (_, e) => e.Handled = true; // not a window drag
-        button.MouseLeftButtonUp += (_, e) => { e.Handled = true; onClick(); };
+        button.MouseLeave += (_, _) => { if (button.Tag is not true) button.Background = Brushes.Transparent; Motion.Press(button, false); };
+        button.MouseLeftButtonDown += (_, e) => { e.Handled = true; Motion.Press(button, true); }; // not a window drag
+        button.MouseLeftButtonUp += (_, e) => { e.Handled = true; Motion.Press(button, false); onClick(); };
         return button;
     }
 
@@ -40,10 +40,11 @@ internal static class IconButton
         if (button.Child is TextBlock text)
         {
             if (glyph != null) text.Text = glyph;
-            text.SetResourceReference(TextBlock.ForegroundProperty, on ? "InkBrush" : "MutedBrush");
+            text.SetResourceReference(TextBlock.ForegroundProperty, on ? "AccentBrush" : "MutedBrush");
         }
         if (tooltip != null) button.ToolTip = tooltip;
-        if (on) button.SetResourceReference(Border.BackgroundProperty, "NavSelectedBrush");
+        // On: the accent (as the current filter tab's underline) on its soft tint, so it reads at a glance.
+        if (on) button.SetResourceReference(Border.BackgroundProperty, "AccentSoftBrush");
         else button.Background = Brushes.Transparent;
     }
 }

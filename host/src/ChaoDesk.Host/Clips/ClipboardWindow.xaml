@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Chao Desk Clipboard"
-        Width="880" Height="560"
+        Width="800" Height="560"
         WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True" ShowActivated="True"
         Background="{DynamicResource PaperBrush}"
         FontFamily="Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI"
@@ -16,10 +16,16 @@
 
     <DockPanel x:Name="Root">
         <!-- Search box, filters, preview, move and pin buttons -->
-        <Grid x:Name="Header" DockPanel.Dock="Top" Height="56" Margin="20,0,14,0">
+        <!-- Search and buttons, the filter tabs on a row below (fits the narrow window; nothing moves when it widens). -->
+        <Grid x:Name="Header" DockPanel.Dock="Top" Margin="20,0,14,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="56" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Text="&#xE77F;" FontSize="17" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"
@@ -27,7 +33,8 @@
             <TextBlock x:Name="Placeholder" Grid.Column="1" Margin="14,0,0,0" FontSize="18" VerticalAlignment="Center" IsHitTestVisible="False"
                        Foreground="{DynamicResource PlaceholderBrush}" Text="Search clipboard history" />
             <TextBox x:Name="QueryBox" Grid.Column="1" Margin="12,0,8,0" FontSize="18" Style="{StaticResource PopupSearchBox}" TextChanged="OnQueryChanged" />
-            <StackPanel x:Name="FilterPanel" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" />
+            <StackPanel x:Name="FilterPanel" Grid.Row="1" Grid.ColumnSpan="4" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,10" />
+            <StackPanel x:Name="ButtonPanel" Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" />
         </Grid>
 
         <!-- Footer (drag it to move the window) -->
@@ -41,12 +48,13 @@
             </DockPanel>
         </Border>
 
+        <!-- The list keeps its width; with the preview off the window is just the list. -->
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="420" />
+                <ColumnDefinition Width="380" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,1,0" Padding="0,6">
+            <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Padding="0,6">
                 <Grid>
                     <ListBox x:Name="Results" Style="{StaticResource PopupList}" ItemContainerStyle="{StaticResource PopupItem}"
                              SelectionChanged="OnSelectionChanged" PreviewMouseLeftButtonDown="OnResultMouseDown">
@@ -81,7 +89,7 @@
             </Border>
 
             <!-- Preview of the selected entry -->
-            <Border x:Name="PreviewPanel" Grid.Column="1" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Background="{DynamicResource PreviewBrush}">
+            <Border x:Name="PreviewPanel" Grid.Column="1" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1,1,0,0" Background="{DynamicResource PreviewBrush}">
                 <Grid Margin="18,14,18,12">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*" MinHeight="60" />

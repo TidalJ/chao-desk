@@ -38,6 +38,11 @@ public sealed class PreviewPane : ContentControl
     private WebView2? _web;
     private MediaElement? _media;
     private string _baseDetails = "";
+    private int _loadId;  // only the newest Load (or ShowText) puts its result on screen
+    private bool _loaded; // the newest Load has finished reading
+
+    /// <summary>The file's preview is on screen (the disk is read in the background; this follows every Load).</summary>
+    public event Action? ContentLoaded;
 
     public string CurrentPath { get; private set; } = "";
     public string Details { get; private set; } = "";
@@ -62,56 +67,93 @@ public sealed class PreviewPane : ContentControl
         Unloaded += (_, _) => Release();
     }
 
+    /// <summary>
+    /// Shows <paramref name="path"/>. Everything that reads the disk (decoding a picture, reading text, listing a
+    /// folder or archive, the shell's thumbnail) runs on a background thread, so a large file never freezes the
+    /// window; the previous preview stays (dimmed) until the new one is ready, or "Loading…" if it takes a while.
+    /// </summary>
     public void Load(string path)
     {
-        Release();
+        bool heavy = _web != null || _media != null || Content is Border { Child: PreviewHandlerHost };
+        if (heavy) Release();
+        else if (Content is UIElement old) old.BeginAnimation(OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(0.5, TimeSpan.FromMilliseconds(100)));
+        _image = null;
+        _imageScroll = null;
+        int id = ++_loadId;
         CurrentPath = path;
-        ImageSize = null;
-        bool isDir = Directory.Exists(path);
-        _baseDetails = Describe(path, isDir);
+        // The picture's size from its header alone (quick), so Quick Look can size its window before showing it.
+        ImageSize = ImageExts.Contains(Path.GetExtension(path)) ? PeekImageSize(path) : null;
+        _baseDetails = "";
         SetDetails("");
-        try
+        if (Content == null) Content = LoadingView();
+        else
         {
-            string ext = Path.GetExtension(path);
-            if (isDir) Content = FolderView(path);
-            else if (ImageExts.Contains(ext) && ImageView(path) is { } image) Content = image;
-            else if (WebImageExts.Contains(ext)) Content = WebView(path, centredImage: true);
-            else if (Inline && (WebMediaExts.Contains(ext) || SystemVideoExts.Contains(ext))) Content = InfoView(path, Loc.T("Shift+Enter plays it in Quick Look · double-click opens it"));
-            else if (WebMediaExts.Contains(ext) || WebDocExts.Contains(ext)) Content = WebView(path, centredImage: false);
-            else if (SystemVideoExts.Contains(ext)) Content = VideoView(path);
-            else if (ZipExts.Contains(ext)) Content = ZipView(path);
-            else if (FontExts.Contains(ext)) Content = FontView(path) ?? InfoView(path);
-            else if (OfficeText.Extensions.Contains(ext) && FromInternet(path)) ShowBlockedOffice(path);
-            else if (PreviewHandlerHost.HandlerFor(path) is { } clsid && !TextFiles.HasTextExtension(path)) Content = HandlerView(path, clsid);
-            else if (OfficeText.Extensions.Contains(ext)) ShowText();
-            else if (new FileInfo(path).Length <= 64L * 1024 * 1024 && TextView(path) is { } text) Content = text;
-            else Content = InfoView(path);
+            var wait = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+            wait.Tick += (_, _) => { wait.Stop(); if (id == _loadId && !_loaded) Content = LoadingView(); };
+            wait.Start();
         }
+        _loaded = false;
+        _ = LoadAsync(path, id, Inline, ImageSize);
+    }
+
+    private async Task LoadAsync(string path, int id, bool inline, Size? imageSize)
+    {
+        Prepared ready;
+        try { ready = await OffThread(() => Prepare(path, inline, imageSize)); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
         {
-            Log.Information(ex, "Could not preview {Path}", CurrentPath);
+            Log.Information(ex, "Could not preview {Path}", path);
+            ready = new Prepared { View = View.Info, Note = ex.Message };
+        }
+        if (id != _loadId) return; // another file was chosen meanwhile
+        _loaded = true;
+        _baseDetails = ready.Description;
+        SetDetails("");
+        try { Content = Build(path, ready); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+        {
+            Log.Information(ex, "Could not preview {Path}", path);
             Content = InfoView(path, ex.Message);
         }
+        if (Content is FrameworkElement shown) Motion.FadeIn(shown);
+        ContentLoaded?.Invoke();
     }
 
     /// <summary>For Office documents: the text, read from the file itself (always works, no formatting).</summary>
     public void ShowText(string? note = null)
     {
         Release();
-        string? text = OfficeText.Extract(CurrentPath);
-        if (text == null) { Content = InfoView(CurrentPath, note ?? Loc.T("This document could not be read.")); return; }
-        Content = TextBox(text, wrap: true);
+        int id = ++_loadId;
+        string path = CurrentPath;
+        Content = LoadingView();
+        _ = ShowTextAsync(path, note, id);
+    }
+
+    private async Task ShowTextAsync(string path, string? note, int id)
+    {
+        string? text;
+        try { text = await OffThread(() => OfficeText.Extract(path)); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException) { text = null; }
+        if (id != _loadId) return;
+        Content = OfficeTextView(path, text, note);
+        ContentLoaded?.Invoke();
+    }
+
+    private FrameworkElement OfficeTextView(string path, string? text, string? note)
+    {
+        if (text == null) return InfoView(path, note ?? Loc.T("This document could not be read."));
         SetDetails(Loc.F("{0} · {1:N0} lines", note ?? Loc.T("text only"), text.Count(c => c == '\n') + 1));
+        return TextBox(text, wrap: true);
     }
 
     /// <summary>
     /// A downloaded file (the "from the internet" mark Windows adds): Office's previewers refuse it (Protected View),
     /// as they do in Explorer. Show its text, and let the user unblock it (as Properties → Unblock does) to see it rendered.
     /// </summary>
-    private void ShowBlockedOffice(string path)
+    private FrameworkElement BlockedOfficeView(string path, string? officeText)
     {
-        ShowText(Loc.T("downloaded from the internet — text only"));
-        if (Content is not TextBox text) return;
+        var view = OfficeTextView(path, officeText, Loc.T("downloaded from the internet — text only"));
+        if (view is not TextBox text) return view;
         var link = new TextBlock { Text = Loc.T("Unblock and preview"), TextDecorations = TextDecorations.Underline, Cursor = System.Windows.Input.Cursors.Hand, Margin = new Thickness(16, 0, 0, 0) };
         link.SetResourceReference(TextBlock.ForegroundProperty, "InkBrush");
         link.MouseLeftButtonUp += (_, _) =>
@@ -130,12 +172,161 @@ public sealed class PreviewPane : ContentControl
         var bar = new Border { Padding = new Thickness(16, 9, 16, 9), BorderThickness = new Thickness(0, 0, 0, 1), Child = row };
         bar.SetResourceReference(Border.BackgroundProperty, "PreviewBrush");
         bar.SetResourceReference(Border.BorderBrushProperty, "LineBrush");
-        Content = null;
         var panel = new DockPanel();
         DockPanel.SetDock(bar, Dock.Top);
         panel.Children.Add(bar);
         panel.Children.Add(text);
-        Content = panel;
+        return panel;
+    }
+
+    // ---- Loading off the UI thread ---------------------------------------------------------------------
+
+    private enum View { Folder, Image, WebImage, Web, Video, Zip, Font, BlockedOffice, Handler, OfficeText, Text, Info }
+
+    /// <summary>Which viewer a file gets, and what was read from the disk for it.</summary>
+    private sealed record Prepared
+    {
+        public required View View { get; init; }
+        public string Description { get; init; } = "";
+        public object? Data { get; init; }   // the decoded picture, the text, the listing
+        public string? Extra { get; init; }  // details found while reading (lines, entries)
+        public Guid Handler { get; init; }
+        public ImageSource? Thumbnail { get; init; }
+        public string? Note { get; init; }
+    }
+
+    /// <summary>Runs on a background STA thread (the shell's thumbnails need one): every disk read for a preview.</summary>
+    private static Prepared Prepare(string path, bool inline, Size? imageSize)
+    {
+        bool isDir = Directory.Exists(path);
+        string description = Describe(path, isDir);
+        string ext = Path.GetExtension(path);
+        Prepared As(View view) => new() { View = view, Description = description };
+        Prepared Info(string? note = null) => As(View.Info) with { Note = note, Thumbnail = ShellIcons.Thumbnail(path, 256) ?? ShellIcons.ForPath(path) };
+
+        if (isDir)
+        {
+            try
+            {
+                var (entries, dirs, files) = ListFolder(path);
+                return As(View.Folder) with { Data = entries, Extra = Loc.F("{0:N0} folders, {1:N0} files", dirs, files) };
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return Info(ex.Message); }
+        }
+        if (ImageExts.Contains(ext) && DecodeImage(path, inline, imageSize) is { } picture) return As(View.Image) with { Data = picture };
+        if (WebImageExts.Contains(ext)) return As(View.WebImage);
+        if (inline && (WebMediaExts.Contains(ext) || SystemVideoExts.Contains(ext))) return Info(Loc.T("Shift+Enter plays it in Quick Look · double-click opens it"));
+        if (WebMediaExts.Contains(ext) || WebDocExts.Contains(ext)) return As(View.Web);
+        if (SystemVideoExts.Contains(ext)) return As(View.Video);
+        if (ZipExts.Contains(ext))
+        {
+            try
+            {
+                using var zip = ZipFile.OpenRead(path);
+                var files = zip.Entries.Where(e => e.Name.Length > 0).ToList();
+                var entries = files.Take(2000).Select(e => (e.FullName, false, e.Length))
+                    .OrderBy(e => e.FullName, Comparer<string>.Create((a, b) => StrCmpLogicalW(a, b))).ToList();
+                return As(View.Zip) with { Data = entries, Extra = Loc.F("{0:N0} files inside, {1} unpacked", files.Count, FormatSize(files.Sum(e => e.Length))) };
+            }
+            catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException) { return Info(Loc.T("Not a readable zip archive.")); }
+        }
+        if (FontExts.Contains(ext)) return As(View.Font);
+        if (OfficeText.Extensions.Contains(ext) && FromInternet(path)) return As(View.BlockedOffice) with { Data = OfficeText.Extract(path) };
+        if (PreviewHandlerHost.HandlerFor(path) is { } clsid && !TextFiles.HasTextExtension(path)) return As(View.Handler) with { Handler = clsid };
+        if (OfficeText.Extensions.Contains(ext)) return As(View.OfficeText) with { Data = OfficeText.Extract(path) };
+        if (new FileInfo(path).Length <= 64L * 1024 * 1024)
+        {
+            try
+            {
+                if (TextFiles.Read(path, out bool truncated) is { } text)
+                {
+                    int lines = text.Count(c => c == '\n') + 1;
+                    return As(View.Text) with { Data = text, Extra = truncated ? Loc.F("first 4 MB · {0:N0} lines", lines) : Loc.F("{0:N0} lines", lines) };
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        }
+        return Info();
+    }
+
+    /// <summary>On the UI thread: the viewer for what <see cref="Prepare"/> read.</summary>
+    private FrameworkElement Build(string path, Prepared ready)
+    {
+        if (ready.Extra != null) SetDetails(ready.Extra);
+        return ready.View switch
+        {
+            View.Folder => Listing((List<(string, bool, long)>)ready.Data!),
+            View.Image => ImageView((BitmapSource)ready.Data!),
+            View.WebImage => WebView(path, centredImage: true),
+            View.Web => WebView(path, centredImage: false),
+            View.Video => VideoView(path),
+            View.Zip => Listing((List<(string, bool, long)>)ready.Data!),
+            View.Font => FontView(path) ?? InfoView(path),
+            View.BlockedOffice => BlockedOfficeView(path, (string?)ready.Data),
+            View.Handler => HandlerView(path, ready.Handler),
+            View.OfficeText => OfficeTextView(path, (string?)ready.Data, null),
+            View.Text => TextBox((string)ready.Data!, WrapsText(path)),
+            _ => InfoView(path, ready.Note, ready.Thumbnail),
+        };
+    }
+
+    /// <summary>Runs <paramref name="work"/> on its own background STA thread.</summary>
+    private static Task<T> OffThread<T>(Func<T> work)
+    {
+        var done = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var thread = new Thread(() =>
+        {
+            try { done.SetResult(work()); }
+            catch (Exception ex) { done.SetException(ex); }
+        }) { IsBackground = true, Name = "Preview" };
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        return done.Task;
+    }
+
+    /// <summary>Shown while a file is read: "Loading…" fades in only if it takes a moment (quick files never flash it).</summary>
+    private static FrameworkElement LoadingView()
+    {
+        var text = new TextBlock { Text = Loc.T("Loading…"), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Opacity = 0 };
+        text.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
+        text.BeginAnimation(OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)) { BeginTime = TimeSpan.FromMilliseconds(250) });
+        return new Grid { Background = Brushes.Transparent, Children = { text } };
+    }
+
+    /// <summary>A picture's pixel size from its header, without decoding it.</summary>
+    private static Size? PeekImageSize(string path)
+    {
+        try
+        {
+            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            var frame = BitmapDecoder.Create(fs, BitmapCreateOptions.DelayCreation | BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.None).Frames[0];
+            return new Size(frame.PixelWidth, frame.PixelHeight);
+        }
+        catch (Exception ex) when (ex is NotSupportedException or FileFormatException or IOException or UnauthorizedAccessException or ArgumentException or COMException) { return null; }
+    }
+
+    /// <summary>
+    /// The whole picture, decoded and frozen (safe to hand to the UI thread). Inline panes are small: a huge
+    /// photo is decoded at most 2400 px wide there, which is much quicker.
+    /// </summary>
+    private static BitmapSource? DecodeImage(string path, bool inline, Size? size)
+    {
+        try
+        {
+            var bmp = new BitmapImage();
+            bmp.BeginInit();
+            bmp.CacheOption = BitmapCacheOption.OnLoad;
+            bmp.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
+            bmp.UriSource = new Uri(path);
+            if (inline && size is { Width: > 2400 }) bmp.DecodePixelWidth = 2400;
+            bmp.EndInit();
+            bmp.Freeze();
+            return bmp;
+        }
+        catch (Exception ex) when (ex is NotSupportedException or FileFormatException or IOException or ArgumentException or UnauthorizedAccessException or COMException)
+        {
+            return null; // no WIC codec (e.g. HEIC without the extension): the thumbnail view takes over
+        }
     }
 
     /// <summary>True when Windows marked the file as downloaded from the internet or an untrusted zone (ZoneId 3 or 4).</summary>
@@ -184,6 +375,7 @@ public sealed class PreviewPane : ContentControl
     /// <summary>Stops media and frees WebView2 and preview handlers (called before every load and on unload).</summary>
     public void Release()
     {
+        _loadId++; // a load still reading in the background is dropped
         _web?.Dispose();
         _web = null;
         if (_media != null) { _media.Stop(); _media.Close(); _media = null; }
@@ -220,25 +412,10 @@ public sealed class PreviewPane : ContentControl
 
     // ---- Views ---------------------------------------------------------------------------------------
 
-    private FrameworkElement? ImageView(string path)
+    private FrameworkElement ImageView(BitmapSource bmp)
     {
-        BitmapImage bmp;
-        try
-        {
-            bmp = new BitmapImage();
-            bmp.BeginInit();
-            bmp.CacheOption = BitmapCacheOption.OnLoad;
-            bmp.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
-            bmp.UriSource = new Uri(path);
-            bmp.EndInit();
-            bmp.Freeze();
-        }
-        catch (Exception ex) when (ex is NotSupportedException or FileFormatException or IOException or ArgumentException)
-        {
-            return null; // no WIC codec (e.g. HEIC without the extension): the thumbnail view takes over
-        }
-        ImageSize = new Size(bmp.PixelWidth, bmp.PixelHeight);
-        SetDetails($"{bmp.PixelWidth} × {bmp.PixelHeight}");
+        ImageSize ??= new Size(bmp.PixelWidth, bmp.PixelHeight); // the real size (an inline preview may be decoded smaller)
+        SetDetails($"{ImageSize.Value.Width} × {ImageSize.Value.Height}");
         // Fitted to the pane at first: scroll bars disabled, so the picture gets the pane's size (never enlarged).
         var image = new Image { Source = bmp, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, ToolTip = Loc.T("Ctrl+wheel: zoom · Ctrl+0: fit") };
         RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
@@ -354,9 +531,10 @@ public sealed class PreviewPane : ContentControl
         if (text == null) return null;
         int lines = text.Count(c => c == '\n') + 1;
         SetDetails(truncated ? Loc.F("first 4 MB · {0:N0} lines", lines) : Loc.F("{0:N0} lines", lines));
-        bool wrap = Path.GetExtension(path).ToLowerInvariant() is ".txt" or ".md" or ".log" or ".srt" or ".lrc" or "";
-        return TextBox(text, wrap);
+        return TextBox(text, WrapsText(path));
     }
+
+    private static bool WrapsText(string path) => Path.GetExtension(path).ToLowerInvariant() is ".txt" or ".md" or ".log" or ".srt" or ".lrc" or "";
 
     private static TextBox TextBox(string text, bool wrap)
     {
@@ -378,34 +556,20 @@ public sealed class PreviewPane : ContentControl
         return box;
     }
 
-    private FrameworkElement FolderView(string path)
+    /// <summary>A folder's first 1000 entries, folders first, in Explorer's order (with the full counts).</summary>
+    private static (List<(string, bool, long)> Entries, int Dirs, int Files) ListFolder(string path)
     {
         var entries = new List<(string Name, bool Dir, long Size)>();
         int dirs = 0, files = 0;
-        try
+        foreach (var e in new DirectoryInfo(path).EnumerateFileSystemInfos())
         {
-            foreach (var e in new DirectoryInfo(path).EnumerateFileSystemInfos())
-            {
-                bool dir = (e.Attributes & FileAttributes.Directory) != 0;
-                if (dir) dirs++; else files++;
-                if (entries.Count < 1000) entries.Add((e.Name, dir, dir ? 0 : ((FileInfo)e).Length));
-            }
+            bool dir = (e.Attributes & FileAttributes.Directory) != 0;
+            if (dir) dirs++; else files++;
+            if (entries.Count < 1000) entries.Add((e.Name, dir, dir ? 0 : ((FileInfo)e).Length));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return InfoView(path, ex.Message); }
-        SetDetails(Loc.F("{0:N0} folders, {1:N0} files", dirs, files));
-        return Listing(entries.OrderByDescending(e => e.Dir).ThenBy(e => e.Name, Comparer<string>.Create((a, b) => StrCmpLogicalW(a, b))));
-    }
-
-    private FrameworkElement ZipView(string path)
-    {
-        try
-        {
-            using var zip = ZipFile.OpenRead(path);
-            var entries = zip.Entries.Where(e => e.Name.Length > 0).Take(2000).Select(e => (e.FullName, false, e.Length)).ToList();
-            SetDetails(Loc.F("{0:N0} files inside, {1} unpacked", zip.Entries.Count(e => e.Name.Length > 0), FormatSize(zip.Entries.Sum(e => e.Length))));
-            return Listing(entries.OrderBy(e => e.FullName, Comparer<string>.Create((a, b) => StrCmpLogicalW(a, b))));
-        }
-        catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException) { return InfoView(path, Loc.T("Not a readable zip archive.")); }
+        var sorted = entries.OrderByDescending(e => e.Dir).ThenBy(e => e.Name, Comparer<string>.Create((a, b) => StrCmpLogicalW(a, b)))
+            .Select(e => (e.Name, e.Dir, e.Size)).ToList();
+        return (sorted, dirs, files);
     }
 
     private static FrameworkElement Listing(IEnumerable<(string Name, bool Dir, long Size)> entries)
@@ -454,11 +618,11 @@ public sealed class PreviewPane : ContentControl
         catch (Exception ex) when (ex is IOException or FileFormatException or ArgumentException or UriFormatException) { return null; }
     }
 
-    /// <summary>The shell's thumbnail (or icon) with the file's details.</summary>
-    private FrameworkElement InfoView(string path, string? note = null)
+    /// <summary>The shell's thumbnail (made off the UI thread; the plain icon when there is none) with the file's details.</summary>
+    private FrameworkElement InfoView(string path, string? note = null, ImageSource? thumbnail = null)
     {
         var stack = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16) };
-        var thumb = ShellIcons.Thumbnail(path, 256) ?? ShellIcons.ForPath(path);
+        var thumb = thumbnail ?? ShellIcons.ForPath(path);
         stack.Children.Add(new Image { Source = thumb, MaxWidth = 256, MaxHeight = 256, Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, Margin = new Thickness(0, 0, 0, 16) });
         var name = new TextBlock { Text = Path.GetFileName(path), FontSize = 17, FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, MaxWidth = 560 };
         name.SetResourceReference(TextBlock.ForegroundProperty, "InkBrush");

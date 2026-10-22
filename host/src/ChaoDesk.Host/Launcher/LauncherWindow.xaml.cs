@@ -59,13 +59,17 @@ public partial class LauncherWindow : Window
     private TextBlock? _sortChip;
     private string _fileStatus = "";
     private List<LauncherItem> _weakApps = new(); // shown after the files
+    private List<LauncherItem> _pending = new(); // the next list (apps, commands…) while its files are searched
+    private readonly DispatcherTimer _showPending;
+    private bool _pendingShown;
     private Preview.PreviewPane? _preview;
     private readonly DispatcherTimer _previewDebounce;
     private LauncherItem? _detailsFor;
-    private const double DetailsWidth = 440, FullWidth = 1080;
+    private const double ListWidth = 640, DetailsWidth = 440; // the list column (as in the XAML) and the details
     private readonly Border _detailsButton;
     private readonly DispatcherTimer _leaveWatch;
     private bool _detailsOn;
+    private int _detailsToggles; // a closing details column ignores its end if it was reopened meanwhile
 
     public LauncherWindow(LauncherContext ctx)
     {
@@ -78,10 +82,10 @@ public partial class LauncherWindow : Window
         _sortChip.MouseLeftButtonUp += (_, _) => { CycleSort(); QueryBox.Focus(); };
         FilterPanel.Children.Insert(0, _sortChip);
         UpdateChips();
-        _detailsButton = IconButton.Create("\uE89F", "", () => { SetDetails(!_detailsOn, keepCentre: true); _ctx.DetailsToggled(_detailsOn); QueryBox.Focus(); });
+        _detailsButton = IconButton.Create("\uE89F", "", () => { SetDetails(!_detailsOn, animate: true); _ctx.DetailsToggled(_detailsOn); QueryBox.Focus(); });
         _detailsButton.Margin = new Thickness(14, 0, 0, 0);
         FilterPanel.Children.Add(_detailsButton);
-        SetDetails(ctx.ShowDetails, keepCentre: false);
+        SetDetails(ctx.ShowDetails, animate: false);
 
         // Files load their preview a moment after the selection settles (arrowing through results stays smooth).
         _previewDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(130) };
@@ -90,6 +94,9 @@ public partial class LauncherWindow : Window
         Results.ContextMenuOpening += OnContextMenuOpening;
         _fileDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(70) };
         _fileDebounce.Tick += (_, _) => { _fileDebounce.Stop(); StartFileSearch(); };
+        // The list changes once per query, files included; if they are slow, show the rest without them first.
+        _showPending = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+        _showPending.Tick += (_, _) => { _showPending.Stop(); _fileStatus = ""; ShowList(_pending, newQuery: true); _pendingShown = true; };
 
         SourceInitialized += (_, _) => PopupPlacement.RoundCorners(this);
         PopupPlacement.IgnoreAltMenu(this);
@@ -128,15 +135,20 @@ public partial class LauncherWindow : Window
         Refresh();
     }
 
-    /// <summary>Rebuild the instant part (apps, commands, calculator, URL) now; files follow asynchronously.</summary>
+    /// <summary>
+    /// Rebuild the instant part (apps, commands, calculator, URL) now; files are searched asynchronously. The list
+    /// on screen is replaced once, when the files are in, so it never blinks empty or reshuffles while typing.
+    /// </summary>
     private void Refresh()
     {
         string query = QueryBox.Text;
         _fileSearch?.Cancel();
         _fileDebounce.Stop();
-        _items.Clear();
+        _showPending.Stop();
+        var next = new List<LauncherItem>();
+        _pending = next;
+        _pendingShown = false;
         _weakApps = new();
-        _fileStatus = "";
 
         string q = LauncherSearch.Normalize(query);
         if (q.Length > 0 && _filter != Filter.Files)
@@ -144,7 +156,7 @@ public partial class LauncherWindow : Window
             if (Calculator.TryEvaluate(q) is { } value)
             {
                 string text = Calculator.Format(value);
-                _items.Add(new LauncherItem
+                next.Add(new LauncherItem
                 {
                     Id = "calc", Title = "= " + text, Subtitle = Loc.T("Press Enter to copy the result"), Kind = LauncherItemKind.Calculation,
                     Run = _ => CopyText(text), Hint = Loc.T("Copy"),
@@ -152,7 +164,7 @@ public partial class LauncherWindow : Window
             }
             if (LauncherSearch.AsUrl(query) is { } url)
             {
-                _items.Add(new LauncherItem
+                next.Add(new LauncherItem
                 {
                     Id = "url", Title = url, Subtitle = Loc.T("Open in your browser"), Kind = LauncherItemKind.Web, Hint = Loc.T("Open"),
                     Run = _ => Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }),
@@ -168,7 +180,7 @@ public partial class LauncherWindow : Window
                 // Empty box: pinned items, then the apps and commands used most.
                 var byId = _ctx.Catalog.Apps.GroupBy(a => a.Id).ToDictionary(g => g.Key, g => g.First());
                 foreach (var pin in _ctx.Stats.Pins)
-                    if (PinItem(pin, byId, commands) is { } pinned) _items.Add(pinned);
+                    if (PinItem(pin, byId, commands) is { } pinned) next.Add(pinned);
                 foreach (string id in _ctx.Stats.Frequent(AppsInAll + _ctx.Stats.Pins.Count).Where(id => !_ctx.Stats.IsPinned(id)).Take(AppsInAll))
                 {
                     var used = byId.TryGetValue(id, out var app) ? AppItem(app)
@@ -176,7 +188,7 @@ public partial class LauncherWindow : Window
                     if (used == null) continue;
                     used.FromHistory = true;
                     used.Hint = Loc.T("Recent");
-                    _items.Add(used);
+                    next.Add(used);
                 }
             }
             else
@@ -187,13 +199,13 @@ public partial class LauncherWindow : Window
                     {
                         var pinned = FileItem(new FileHit(pin.Path!, pin.Title, pin.Kind == LauncherItemKind.Folder));
                         pinned.Hint = Loc.T("Pinned");
-                        _items.Add(pinned);
+                        next.Add(pinned);
                     }
                 int take = _filter == Filter.Apps ? AppsOnly : AppsInAll;
                 foreach (var r in LauncherSearch.Rank(_ctx.Catalog.Apps, commands, query, _ctx.Stats, DateTime.Now).Take(take))
                 {
                     var item = r.App != null ? AppItem(r.App) : CommandItem(r.Command!);
-                    if (r.IsStrong || _filter == Filter.Apps) _items.Add(item);
+                    if (r.IsStrong || _filter == Filter.Apps) next.Add(item);
                     else _weakApps.Add(item);
                 }
             }
@@ -201,25 +213,64 @@ public partial class LauncherWindow : Window
 
         if (_filter != Filter.Apps && WantsFileSearch(q))
         {
-            if (_ctx.Files.CanSetUp && _ctx.FileSearchEnabled()) { AddWeakApps(); _items.Add(SetupItem()); }
-            else if (_ctx.FileSearchEnabled() && _ctx.Files.CanSearch) _fileDebounce.Start();
-            else AddWeakApps();
+            if (_ctx.Files.CanSetUp && _ctx.FileSearchEnabled()) { AddWeakApps(next); next.Add(SetupItem()); }
+            else if (_ctx.FileSearchEnabled() && _ctx.Files.CanSearch)
+            {
+                _fileDebounce.Start();
+                _showPending.Start();
+                return; // the list stays as it is until the files are in
+            }
+            else AddWeakApps(next);
         }
-        else AddWeakApps();
+        else AddWeakApps(next);
 
+        _fileStatus = "";
+        ShowList(next, newQuery: true);
+    }
+
+    /// <summary>
+    /// Puts <paramref name="next"/> on screen, keeping every row that did not change (same row, same place), so
+    /// one more letter or a space redraws only what really differs. A new query selects the first row again.
+    /// </summary>
+    private void ShowList(List<LauncherItem> next, bool newQuery)
+    {
+        for (int i = 0; i < next.Count; i++)
+        {
+            if (i < _items.Count && SameRow(_items[i], next[i])) { _items[i].Hint = next[i].Hint; continue; }
+            if (i < _items.Count) _items[i] = next[i];
+            else _items.Add(next[i]);
+        }
+        while (_items.Count > next.Count) _items.RemoveAt(_items.Count - 1);
+        if (newQuery)
+        {
+            // Never preselect the setup row: Enter right after typing must not start an administrator prompt.
+            int first = _items.ToList().FindIndex(i => i.Kind != LauncherItemKind.Setup);
+            if (Results.SelectedIndex != first) Results.SelectedIndex = first;
+        }
         AfterItemsChanged();
     }
+
+    private static bool SameRow(LauncherItem a, LauncherItem b) =>
+        a.Id == b.Id && a.Title == b.Title && a.Subtitle == b.Subtitle && a.Kind == b.Kind && a.FromHistory == b.FromHistory;
 
     private static bool WantsFileSearch(string q) => q.Length >= 2 || (q.Length == 1 && Pinyin.IsHan(q[0]));
 
     private void StartFileSearch()
     {
-        if (!_ctx.FileSearchEnabled() || !_ctx.Files.CanSearch) { AddWeakApps(); AfterItemsChanged(); return; }
+        var pending = _pending;
+        if (!_ctx.FileSearchEnabled() || !_ctx.Files.CanSearch)
+        {
+            _showPending.Stop();
+            AddWeakApps(pending);
+            _fileStatus = "";
+            ShowList(pending, newQuery: !_pendingShown);
+            return;
+        }
         string query = QueryBox.Text;
         var sort = _filter == Filter.Files ? _sort : Sort.Relevance;
         int show = _filter == Filter.Files ? FilesOnly : FilesInAll;
         int limit = sort == Sort.Relevance ? show : SortPool;
-        var shown = _items.Where(i => i.Path != null).Select(i => i.Path!).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var shown = pending.Where(i => i.Path != null).Select(i => i.Path!).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var cts = new CancellationTokenSource();
         _fileSearch = cts;
         var started = Stopwatch.StartNew();
@@ -238,23 +289,25 @@ public partial class LauncherWindow : Window
             return (result.Total, Stats: stats.Take(show).ToList());
         }, cts.Token).ContinueWith(t =>
         {
-            if (cts.IsCancellationRequested || t.IsFaulted || t.IsCanceled || QueryBox.Text != query) return;
+            if (cts.IsCancellationRequested || t.IsFaulted || t.IsCanceled || QueryBox.Text != query || _pending != pending) return;
+            _showPending.Stop();
             var (total, stats) = t.Result;
+            var next = new List<LauncherItem>(pending);
             foreach (var (hit, info) in stats)
             {
                 if (shown.Contains(hit.Path)) continue; // already listed as a pin
                 var item = FileItem(hit);
                 item.Hint = Describe(hit, info);
-                _items.Add(item);
+                next.Add(item);
             }
-            AddWeakApps();
+            AddWeakApps(next);
             string by = sort switch { Sort.Name => Loc.T("by name"), Sort.Modified => Loc.T("by date modified"), Sort.Size => Loc.T("by size"), _ => "" };
             if (by.Length > 0 && total > SortPool) by = Loc.F("{0} among the best {1:N0}", by, SortPool);
             string sorted = by.Length == 0 ? "" : " · " + by;
             _fileStatus = total == 0 ? Loc.T("No files match")
                 : total == 1 ? Loc.F("{0:N0} file matches{1} · {2} ms", total, sorted, started.ElapsedMilliseconds)
                 : Loc.F("{0:N0} files match{1} · {2} ms", total, sorted, started.ElapsedMilliseconds);
-            AfterItemsChanged();
+            ShowList(next, newQuery: !_pendingShown); // the user may already be arrowing through the early list
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
@@ -312,15 +365,17 @@ public partial class LauncherWindow : Window
         return item;
     }
 
-    private void AddWeakApps()
+    private void AddWeakApps(List<LauncherItem> list)
     {
-        foreach (var item in _weakApps) _items.Add(item);
+        list.AddRange(_weakApps);
         _weakApps = new();
     }
 
     private void AfterItemsChanged()
     {
-        bool show = _items.Count > 0;
+        // While something is typed the results area stays open, even with no match, so it does not jump shut and open.
+        bool show = _items.Count > 0 || QueryBox.Text.Length > 0;
+        NoResults.Visibility = _items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         if (show && ResultsHost.Visibility != Visibility.Visible)
         {
             ResultsHost.Visibility = Visibility.Visible;
@@ -356,6 +411,15 @@ public partial class LauncherWindow : Window
         _ctx.StatsChanged();
         Refresh();
         StatusText.Text = Loc.T("History cleared. Pinned items stay.");
+        QueryBox.Focus();
+    }
+
+    /// <summary>The search icon and the footer move the window (until it is opened again, centred).</summary>
+    private void OnMoveAreaMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ButtonState != MouseButtonState.Pressed || e.OriginalSource == ClearHistoryLink) return;
+        e.Handled = true;
+        try { DragMove(); } catch (InvalidOperationException) { }
         QueryBox.Focus();
     }
 
@@ -556,17 +620,37 @@ public partial class LauncherWindow : Window
 
     // ---- Details column -------------------------------------------------------------------------------
 
-    /// <summary>Shows or hides the details column (the window narrows around its centre).</summary>
-    private void SetDetails(bool on, bool keepCentre)
+    /// <summary>
+    /// Shows or hides the details column; without it the window is just the list. The window glides wider or
+    /// narrower with its left edge kept, so the list never moves, while the column fades in (or is swept away).
+    /// </summary>
+    private void SetDetails(bool on, bool animate)
     {
         _detailsOn = on;
-        PreviewHost.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
-        double width = on ? FullWidth : FullWidth - DetailsWidth;
-        if (keepCentre && !double.IsNaN(Left)) Left += (Width - width) / 2;
-        Width = width;
         IconButton.Set(_detailsButton, on, null, on ? Loc.T("Hide the details and preview") : Loc.T("Show the details and preview"));
-        if (on) { _detailsFor = null; ShowDetails(); }
-        else _preview?.Release();
+        int toggle = ++_detailsToggles;
+        animate &= IsVisible;
+        if (on)
+        {
+            PreviewHost.Visibility = Visibility.Visible;
+            _detailsFor = null;
+            ShowDetails();
+            if (animate) { Motion.Reveal(PreviewHost); Motion.GlideWidth(this, ListWidth + DetailsWidth); }
+            else { PreviewHost.BeginAnimation(OpacityProperty, null); Width = ListWidth + DetailsWidth; }
+            return;
+        }
+        _previewDebounce?.Stop();
+        void Closed()
+        {
+            if (toggle != _detailsToggles) return; // opened again meanwhile
+            PreviewHost.Visibility = Visibility.Collapsed;
+            PreviewHost.BeginAnimation(OpacityProperty, null);
+            _preview?.Release();
+            PreviewSlot.Content = null;
+            _detailsFor = null;
+        }
+        if (animate) Motion.GlideWidth(this, ListWidth, Closed); // the edge sweeps over the column, like a drawer shutting
+        else { Width = ListWidth; Closed(); }
     }
 
     /// <summary>Fills the details column for the selected result (files: a preview; others: what they are).</summary>

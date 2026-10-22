@@ -11,7 +11,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>ChaoDesk</AssemblyName>
     <RootNamespace>ChaoDesk.Host</RootNamespace>
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
     <Product>Chao Desk</Product>
     <ApplicationIcon>Assets\chaodesk.ico</ApplicationIcon>
   </PropertyGroup>
