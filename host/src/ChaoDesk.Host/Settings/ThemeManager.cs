@@ -43,7 +43,7 @@ public static class ThemeManager
         _initialised = true;
         IsDark = dark;
         var merged = Application.Current.Resources.MergedDictionaries;
-        var colours = new ResourceDictionary { Source = new Uri(dark ? "/Themes/Dark.xaml" : "/Themes/Light.xaml", UriKind.Relative) };
+        var colours = new ResourceDictionary { Source = new Uri(dark ? "/ChaoDesk;component/Themes/Dark.xaml" : "/ChaoDesk;component/Themes/Light.xaml", UriKind.Relative) };
         if (merged.Count > 0) merged[0] = colours; else merged.Add(colours);
         foreach (Window w in Application.Current.Windows) ApplyFrame(w);
         Changed?.Invoke();

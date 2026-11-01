@@ -15,3 +15,22 @@ sheets were generated with AI tools for it). The app uses, and its installer shi
 | Microsoft Visual C++ Redistributable DLLs | Needed by ONNX Runtime; shipped app-local | Microsoft Visual Studio redistribution terms |
 
 Build and test tools (not shipped): .NET SDK, xUnit, Inno Setup, Node.js.
+
+## Liquid Glass React
+
+The quick panel embeds the three displacement textures from `rdev/liquid-glass-react`
+(`src/utils.ts`, commit `ac48eab18d1f7f444ae30002d240cae29c863a21`), ports its shader
+displacement generator to C#, and adapts its RGB displacement/filter composition to HLSL.
+Source: https://github.com/rdev/liquid-glass-react — MIT, Copyright 2025 MAX ROVENSKY.
+The complete license is embedded in ChaoDesk.dll as `Panel/Maps/LICENSE.txt` and is
+reproduced in `host/src/ChaoDesk.Host/Panel/Maps/LICENSE.txt`.
+
+## Liquid Glass Studio
+
+The quick panel's precomputed bevel refraction profile adapts the edge-distance and
+Snell-law construction from `iyinchao/liquid-glass-studio` (`src/shaders/fragment-main.glsl`,
+commit `f7b28c36305a862f5cffed3ddd51511cf1204f56`). The C# lookup normalizes and precomputes
+the optical profile; its blending and inner reflection channels are specific to Chao Desk.
+Source: https://github.com/iyinchao/liquid-glass-studio — MIT, Copyright 2024 Charles Yin.
+The complete license is embedded in ChaoDesk.dll and reproduced in
+`host/src/ChaoDesk.Host/Panel/Maps/LIQUID-GLASS-STUDIO-LICENSE.txt`.

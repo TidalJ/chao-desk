@@ -11,6 +11,22 @@
         TextOptions.TextFormattingMode="Display"
         UseLayoutRounding="True">
     <Window.Resources>
+        <Style x:Key="PanelTab" TargetType="TabItem">
+            <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="TabSurface" Background="Transparent" CornerRadius="4" Padding="14,8" Margin="0,0,6,0">
+                            <ContentPresenter x:Name="TabHeader" ContentSource="Header" RecognizesAccessKey="True" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="TabSurface" Property="Background" Value="{DynamicResource HoverBrush}" /></Trigger>
+                            <Trigger Property="IsSelected" Value="True"><Setter TargetName="TabSurface" Property="Background" Value="{DynamicResource NavSelectedBrush}" /><Setter TargetName="TabHeader" Property="TextElement.FontWeight" Value="SemiBold" /></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <!-- Sidebar navigation item -->
         <Style x:Key="NavItem" TargetType="RadioButton">
             <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
@@ -61,10 +77,12 @@
                 </StackPanel>
                 <TextBlock DockPanel.Dock="Bottom" x:Name="StatusText" TextWrapping="Wrap" FontSize="11.5"
                            Foreground="{DynamicResource MutedBrush}" Margin="4,12,4,0" />
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel>
                     <RadioButton x:Name="NavHome" Style="{StaticResource NavItem}" GroupName="nav" Content="Home" IsChecked="True" Checked="OnNavChanged" />
                     <TextBlock Text="TOOLS" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" Margin="14,16,0,4" />
                     <RadioButton x:Name="NavLauncher" Style="{StaticResource NavItem}" GroupName="nav" Content="Launcher" Checked="OnNavChanged" />
+                    <RadioButton x:Name="NavPanel" Style="{StaticResource NavItem}" GroupName="nav" Content="Action panel" Checked="OnNavChanged" />
                     <RadioButton x:Name="NavClipboard" Style="{StaticResource NavItem}" GroupName="nav" Content="Clipboard" Checked="OnNavChanged" />
                     <RadioButton x:Name="NavScreenshot" Style="{StaticResource NavItem}" GroupName="nav" Content="Screenshot" Checked="OnNavChanged" />
                     <TextBlock Text="WALLPAPER" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource MutedBrush}" Margin="14,16,0,4" />
@@ -76,6 +94,7 @@
                     <RadioButton x:Name="NavGeneral" Style="{StaticResource NavItem}" GroupName="nav" Content="General" Checked="OnNavChanged" />
                     <RadioButton x:Name="NavDiagnostics" Style="{StaticResource NavItem}" GroupName="nav" Content="Diagnostics" Checked="OnNavChanged" />
                 </StackPanel>
+                </ScrollViewer>
             </DockPanel>
         </Border>
 
@@ -241,6 +260,27 @@
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
+            </DockPanel>
+
+            <!-- Quick panel configuration lives in the main application. -->
+            <DockPanel x:Name="PanelPage" Margin="32,26,24,20" Visibility="Collapsed">
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,8,16">
+                    <TextBlock Style="{StaticResource PageTitle}" Text="Action panel" />
+                    <TextBlock Style="{StaticResource PageSubtitle}" Text="Manage actions, appearance and how the panel opens." />
+                </StackPanel>
+                <TabControl x:Name="PanelSettingsTabs" Background="Transparent" BorderThickness="0">
+                    <TabItem Header="Manage actions" Style="{StaticResource PanelTab}">
+                        <ContentControl x:Name="PanelActionsHost" Margin="0,12,0,0" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+                    </TabItem>
+                    <TabItem Header="Appearance and shortcuts" Style="{StaticResource PanelTab}">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,12,0,0">
+                            <StackPanel Margin="0,0,8,12">
+                                <Border Style="{StaticResource Card}"><StackPanel x:Name="PanelHotkeysPanel" /></Border>
+                                <Border Style="{StaticResource Card}" Margin="0,12,0,0"><StackPanel x:Name="PanelOptionsPanel" /></Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+                </TabControl>
             </DockPanel>
 
             <!-- Screenshot -->

@@ -20,6 +20,11 @@ namespace ChaoDesk.Host.Settings;
 /// <summary>What the settings window needs from the running app. Implemented by <see cref="AppHost"/>.</summary>
 public interface ISettingsHost
 {
+    string PanelMouseMode { get; set; }
+    string PanelMaterial { get; set; }
+    Panel.GlassOptions PanelGlass { get; set; }
+    Panel.PanelLayout PanelActions { get; }
+    void PreviewPanelGlass();
     AppSettings Settings { get; }
     WallpaperLibrary Library { get; }
     string CurrentWallpaperId { get; }
@@ -102,6 +107,7 @@ public partial class SettingsWindow : Window
     private readonly ISettingsHost _host;
     private readonly DispatcherTimer _diagTimer;
     private bool _loading;
+    private PanelActionsEditor? _panelEditor;
 
     public SettingsWindow(ISettingsHost host)
     {
@@ -145,6 +151,8 @@ public partial class SettingsWindow : Window
         _hotkeyBoxes.Add(LauncherHotkeyBox);
         _hotkeyBoxes.Add(ClipboardHotkeyBox);
         BuildScreenshotHotkeys();
+        _panelEditor = new PanelActionsEditor(_host.PanelActions, _host.SuspendHotkeys);
+        PanelActionsHost.Content = _panelEditor;
         foreach (var box in _hotkeyBoxes) WireHotkeyBox(box);
         LoadScreenshot();
         UpdateStatus();
@@ -163,8 +171,10 @@ public partial class SettingsWindow : Window
             "clipboard" => NavClipboard,
             "screenshot" => NavScreenshot,
             "launcher" => NavLauncher,
+            "panel" => NavPanel,
             _ => NavHome,
         }).IsChecked = true;
+        if (page == "panel") PanelSettingsTabs.SelectedIndex = 0;
     }
 
     private void OnHostStateChanged()
@@ -187,6 +197,11 @@ public partial class SettingsWindow : Window
         LauncherPage.Visibility = NavLauncher.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         ClipboardPage.Visibility = NavClipboard.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         ScreenshotPage.Visibility = NavScreenshot.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        PanelPage.Visibility = NavPanel.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        if (NavPanel.IsChecked == true) {
+            _panelEditor?.RefreshActions();
+            foreach (var box in _hotkeyBoxes.Where(b => Equals(b.Tag,"panel"))) ShowHotkey(box);
+        }
         if (NavScreenshot.IsChecked == true) LoadScreenshot();
         if (NavLauncher.IsChecked == true) LoadLauncher();
         if (NavClipboard.IsChecked == true) LoadClipboard();
@@ -623,6 +638,9 @@ public partial class SettingsWindow : Window
     {
         HomePanel.Children.Clear();
         string Hk(string which) => _host.HotkeyText(which) is { Length: > 0 } k ? k : Loc.T("no hotkey");
+        HomePanel.Children.Add(HomeCard(Loc.T("Action panel"), "\uE80A", NavPanel,
+            Hk("panel"), Loc.T("Open the action panel for clipboard, screenshots, text recognition and translation."),
+            (Loc.T("Open"), () => _host.OpenTool("panel"))));
         HomePanel.Children.Add(HomeCard(Loc.T("Launcher"), "\uE721", NavLauncher,
             Loc.F("{0} · apps, files, sums and commands", Hk("launcher")),
             _host.FileSearchStatus, (Loc.T("Open"), () => _host.OpenTool("launcher"))));
@@ -822,7 +840,7 @@ public partial class SettingsWindow : Window
     private void LeaveHotkeyBox()
     {
         Keyboard.ClearFocus();
-        (NavLauncher.IsChecked == true ? NavLauncher : NavClipboard.IsChecked == true ? NavClipboard : NavScreenshot).Focus();
+        (NavLauncher.IsChecked == true ? NavLauncher : NavClipboard.IsChecked == true ? NavClipboard : NavPanel.IsChecked == true ? NavPanel : NavScreenshot).Focus();
     }
 
     private static string ModifierText(ModifierKeys mods) =>
@@ -851,8 +869,17 @@ public partial class SettingsWindow : Window
 
     private void BuildScreenshotHotkeys()
     {
+        AddPanelChoice(Loc.T("Panel mouse gesture"), Loc.T("Only the selected gesture is taken over; other mouse buttons keep their normal behavior."),
+            PanelMouseTrigger.Modes,
+            [Loc.T("Off"), Loc.T("Middle click"), Loc.T("Double middle click"), Loc.T("Mouse back button"), Loc.T("Mouse forward button"), Loc.T("Ctrl + right click"), Loc.T("Alt + left click")],
+            _host.PanelMouseMode, value => _host.PanelMouseMode = value);
+        AddPanelChoice(Loc.T("Panel material"), Loc.T("Liquid and soft glass refract the live background locally. No images are saved; this panel is excluded from screenshots."),
+            ["liquid", "soft", "smoked"], [Loc.T("Liquid glass"), Loc.T("Soft glass"), Loc.Pick("Smoked glass", "烟晶玻璃")],
+            _host.PanelMaterial, value => _host.PanelMaterial = value);
+        BuildGlassControls();
         var rows = new (string Which, string Label, string Hint)[]
         {
+            ("panel", Loc.T("Action panel"), Loc.T("Open the action panel for clipboard, screenshots, text recognition and translation.")),
             ("screenshot", Loc.T("Screenshot"), Loc.T("Choose an area or a window, mark it up, then copy, save or pin it.")),
             ("quickshot", Loc.T("Quick screenshot"), Loc.T("The whole screen, straight to the clipboard.")),
             ("scrollshot", Loc.T("Scrolling screenshot"), Loc.T("Scrolls a page and stitches one long image. Esc stops.")),
@@ -863,8 +890,11 @@ public partial class SettingsWindow : Window
         bool first = true;
         foreach (var (which, label, hint) in rows)
         {
-            if (!first) ScreenshotHotkeysPanel.Children.Add(new Separator { Style = (Style)FindResource("RowSeparator") });
-            first = false;
+            var container = which == "panel" ? PanelHotkeysPanel : ScreenshotHotkeysPanel;
+            if (which != "panel") {
+                if (!first) container.Children.Add(new Separator { Style = (Style)FindResource("RowSeparator") });
+                first = false;
+            }
             var grid = new Grid { Style = (Style)FindResource("SettingRow") };
             var texts = new StackPanel();
             texts.Children.Add(new TextBlock { Text = label, Style = (Style)FindResource("SettingLabel") });
@@ -874,10 +904,64 @@ public partial class SettingsWindow : Window
             grid.Children.Add(texts);
             var box = new TextBox { Style = (Style)FindResource("FieldText"), Width = 160, Tag = which };
             grid.Children.Add(box);
-            ScreenshotHotkeysPanel.Children.Add(grid);
+            container.Children.Add(grid);
             _hotkeyErrors[which] = error;
             _hotkeyBoxes.Add(box);
         }
+    }
+
+    private void AddPanelChoice(string title, string hint, string[] values, string[] labels, string current, Action<string> changed)
+    {
+        var row = new Grid { Style = (Style)FindResource("SettingRow") };
+        var texts = new StackPanel();
+        texts.Children.Add(new TextBlock { Text = title, Style = (Style)FindResource("SettingLabel") });
+        texts.Children.Add(new TextBlock { Text = hint, Style = (Style)FindResource("SettingHint") }); row.Children.Add(texts);
+        var choice = new ComboBox { ItemsSource = labels, Style = (Style)FindResource("FieldCombo"), Width = 180, SelectedIndex = Math.Max(0, Array.IndexOf(values, current)) };
+        choice.SelectionChanged += (_, _) => { if (choice.SelectedIndex >= 0) changed(values[choice.SelectedIndex]); };
+        row.Children.Add(choice); PanelOptionsPanel.Children.Add(row);
+    }
+
+    private void BuildGlassControls()
+    {
+        var options = _host.PanelGlass ?? new Panel.GlassOptions();
+        var content = new StackPanel { Margin = new Thickness(0,8,0,12) };
+        var expander = new Expander { Header = Loc.Pick("Adjust glass appearance", "调节玻璃效果"), Content = content, Margin = new Thickness(16,4,16,12) };
+        PanelOptionsPanel.Children.Add(expander);
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0,0,0,12) };
+        var preview = new Button { Content = Loc.Pick("Open live preview", "打开实时预览"), Style = (Style)FindResource("SecondaryButton"), Padding = new Thickness(12,7,12,7) };
+        preview.Click += (_, _) => _host.PreviewPanelGlass(); actions.Children.Add(preview);
+        var reset = new Button { Content = Loc.Pick("Reset", "恢复默认"), Style = (Style)FindResource("SecondaryButton"), Margin = new Thickness(8,0,0,0), Padding = new Thickness(12,7,12,7) };
+        actions.Children.Add(reset); content.Children.Add(actions);
+        var reference = new Button { Content = Loc.Pick("Reference demo preset", "参考演示参数"), Style = (Style)FindResource("SecondaryButton"), Margin = new Thickness(8,0,0,0), Padding = new Thickness(12,7,12,7) };
+        actions.Children.Add(reference);
+        content.Children.Add(new TextBlock { Text = Loc.Pick("Preview stays open while you adjust. Changes are saved automatically. Applies to liquid and soft glass.", "预览保持打开，拖动滑块实时调整并自动保存。适用于液态与拟态玻璃。"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0,0,0,12), Style = (Style)FindResource("SettingHint") });
+        var modes = new[] { "standard", "polar", "prominent", "shader" };
+        var mode = new ComboBox { ItemsSource = new[] { "Standard · 标准", "Polar · 极坐标", "Prominent · 强折射", "Shader · 曲面" }, Style = (Style)FindResource("FieldCombo"), SelectedIndex = Math.Max(0,Array.IndexOf(modes,options.Mode)), HorizontalAlignment = HorizontalAlignment.Left, MinWidth = 180, Margin = new Thickness(0,0,0,12) };
+        System.Windows.Automation.AutomationProperties.SetName(mode, Loc.Pick("Refraction mode", "折射模式"));
+        content.Children.Add(mode);
+        mode.SelectionChanged += (_, _) => { options=options with { Mode=modes[mode.SelectedIndex] }; _host.PanelGlass=options; };
+        var resetters = new List<Action<Panel.GlassOptions>>();
+        void SliderRow(string title, double min, double max, double step, Func<Panel.GlassOptions,double> get, Func<Panel.GlassOptions,double,Panel.GlassOptions> set, string format)
+        {
+            var row = new Grid { Margin = new Thickness(0,5,0,9) };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100) });
+            row.ColumnDefinitions.Add(new ColumnDefinition()); row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(64) });
+            row.Children.Add(new TextBlock { Text=title, VerticalAlignment=VerticalAlignment.Center });
+            var slider = new Slider { Minimum=min, Maximum=max, TickFrequency=step, SmallChange=step, LargeChange=step*5, IsSnapToTickEnabled=true, Value=get(options), VerticalAlignment=VerticalAlignment.Center, Margin=new Thickness(8,0,12,0) };
+            System.Windows.Automation.AutomationProperties.SetName(slider,title);
+            var value = new TextBlock { Text=get(options).ToString(format), VerticalAlignment=VerticalAlignment.Center, HorizontalAlignment=HorizontalAlignment.Right };
+            Grid.SetColumn(slider,1); Grid.SetColumn(value,2); row.Children.Add(slider); row.Children.Add(value); content.Children.Add(row);
+            slider.ValueChanged += (_, _) => { options=set(options,slider.Value); value.Text=slider.Value.ToString(format); _host.PanelGlass=options; };
+            resetters.Add(o => slider.Value=get(o));
+        }
+        SliderRow(Loc.Pick("Refraction","折射强度"),0,200,1,o=>o.Displacement,(o,v)=>o with {Displacement=v},"0");
+        SliderRow(Loc.Pick("Frosting","磨砂程度"),0,1,.01,o=>o.Blur,(o,v)=>o with {Blur=v},"0.00");
+        SliderRow(Loc.Pick("Saturation","饱和度 %"),100,300,5,o=>o.Saturation,(o,v)=>o with {Saturation=v},"0");
+        SliderRow(Loc.Pick("Dispersion","色散强度"),0,20,.5,o=>o.Aberration,(o,v)=>o with {Aberration=v},"0.0");
+        SliderRow(Loc.Pick("Corner radius","圆角半径"),0,48,1,o=>o.Radius,(o,v)=>o with {Radius=v},"0");
+        SliderRow(Loc.Pick("Highlight","边缘高光"),0,2,.05,o=>o.Highlight,(o,v)=>o with {Highlight=v},"0.00");
+        reset.Click += (_, _) => { options=new(); mode.SelectedIndex=0; foreach(var apply in resetters) apply(options); _host.PanelGlass=options; };
+        reference.Click += (_, _) => { options=new() { Displacement=100, Blur=.5, Radius=32 }; mode.SelectedIndex=0; foreach(var apply in resetters) apply(options); _host.PanelGlass=options; };
     }
 
     /// <summary>In the order of <see cref="AppSettings.AllowedJpegQualities"/> (100 = PNG).</summary>

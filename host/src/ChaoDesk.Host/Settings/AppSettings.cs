@@ -34,6 +34,12 @@ public sealed class AppSettings
     // ---- Launcher, clipboard, file search ----
 
     public const string DefaultLauncherHotkey = "Alt+Space";
+    public const string DefaultPanelHotkey = "Ctrl+Space";
+    public string PanelHotkey { get; set; } = DefaultPanelHotkey;
+    public string PanelMouseTrigger { get; set; } = "middle";
+    public string PanelMaterial { get; set; } = "liquid";
+    public Panel.GlassOptions PanelGlass { get; set; } = new();
+    public List<Panel.PanelItem> PanelItems { get; set; } = Panel.PanelLayout.Defaults();
     public const string DefaultClipboardHotkey = "Shift+`";
     public static readonly string[] DefaultIgnoredApps = ["KeePass", "KeePassXC", "1Password", "Bitwarden", "Enpass"];
 
@@ -175,6 +181,11 @@ public sealed class AppSettings
         if (!Translate.Translator.Engines.Contains(TranslateEngine)) TranslateEngine = "auto";
         if (!Translate.Translator.Targets.Contains(TranslateTarget)) TranslateTarget = "auto";
         LauncherHotkey = NormalizeHotkey(LauncherHotkey, DefaultLauncherHotkey);
+        PanelHotkey = NormalizeHotkey(PanelHotkey, DefaultPanelHotkey);
+        if (!Input.PanelMouseTrigger.Modes.Contains(PanelMouseTrigger)) PanelMouseTrigger = "middle";
+        if (PanelMaterial is not ("liquid" or "soft" or "smoked")) PanelMaterial = "liquid";
+        PanelGlass = (PanelGlass ?? new()).Normalize();
+        PanelItems = Panel.PanelLayout.Normalize(PanelItems);
         ClipboardHotkey = NormalizeHotkey(ClipboardHotkey, DefaultClipboardHotkey);
         ScreenshotHotkey = NormalizeHotkey(ScreenshotHotkey, DefaultScreenshotHotkey);
         QuickScreenshotHotkey = NormalizeHotkey(QuickScreenshotHotkey, DefaultQuickScreenshotHotkey);

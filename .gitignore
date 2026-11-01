@@ -24,6 +24,11 @@ Thumbs.db
 .idea/
 
 # Local notes and development scripts (not published)
+/AGENTS.md
+/DESIGN.md
+/PRODUCT.md
+/GLASS_PANEL_HANDOFF.md
+/docs/glass-panel-verification.md
 /CLAUDE.md
 /docs/decisions.md
 /tools/

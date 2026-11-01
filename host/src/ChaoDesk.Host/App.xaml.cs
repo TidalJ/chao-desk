@@ -8,6 +8,7 @@ namespace ChaoDesk.Host;
 
 public partial class App : Application
 {
+    static App() => StartupDiagnostics.Begin();
 #if DEBUG
     public const bool IsDebugBuild = true;
 #else
@@ -20,17 +21,23 @@ public partial class App : Application
 
     protected override async void OnStartup(StartupEventArgs e)
     {
+        StartupDiagnostics.Stage("OnStartup entered");
         base.OnStartup(e);
         if (RunHelperMode(e.Args)) return;
         bool exitRequested = e.Args.Any(a => a.Equals("--exit", StringComparison.OrdinalIgnoreCase));
+        bool panelRequested = e.Args.Any(a => a.Equals("--panel", StringComparison.OrdinalIgnoreCase));
 
+        StartupDiagnostics.Stage("Checking single instance");
         _singleInstance = new SingleInstance(
             onShowRequested: () => Dispatcher.BeginInvoke(ShowSettings),
-            onExitRequested: () => Dispatcher.BeginInvoke(ExitApp));
+            onExitRequested: () => Dispatcher.BeginInvoke(ExitApp),
+            onPanelRequested: () => Dispatcher.BeginInvoke(() => _host?.TogglePanel()));
         if (!_singleInstance.IsPrimary || exitRequested)
         {
+            StartupDiagnostics.Record($"Early exit; primary={_singleInstance.IsPrimary}; exitRequested={exitRequested}");
             // Another instance owns the desktop: forward the request and quit.
-            if (!_singleInstance.IsPrimary) SingleInstance.SignalRunningInstance(exitRequested);
+            if (!_singleInstance.IsPrimary)
+                StartupDiagnostics.Record($"Signal running instance: {SingleInstance.SignalRunningInstance(exitRequested, panelRequested)}");
             _singleInstance.Dispose();
             _singleInstance = null;
             _cleanedUp = true;
@@ -38,6 +45,7 @@ public partial class App : Application
             return;
         }
 
+        StartupDiagnostics.Stage("Preparing data folders and normal logger");
         AppPaths.EnsureCreated();
         Logging.Initialize();
         Log.Information("Chao Desk {Version} starting (OS {Os})", typeof(App).Assembly.GetName().Version, Environment.OSVersion);
@@ -48,15 +56,25 @@ public partial class App : Application
             Log.Fatal(ev.ExceptionObject as Exception, "Unhandled exception");
             Cleanup();
         };
-        SessionEnding += (_, _) => Cleanup();
+        SessionEnding += (_, ev) =>
+        {
+            StartupDiagnostics.Record($"Windows session ending: {ev.ReasonSessionEnding}");
+            Cleanup();
+        };
 
         try
         {
+            StartupDiagnostics.Stage("Constructing AppHost");
             _host = new AppHost(IsDebugBuild, ExitApp);
+            StartupDiagnostics.Stage("Starting AppHost");
             await _host.StartAsync();
+            if (panelRequested) _host.TogglePanel();
+            StartupDiagnostics.Stage("Startup complete");
+            _ = Dispatcher.BeginInvoke(() => StartupDiagnostics.Record("UI dispatcher responsive after startup"));
         }
         catch (Exception ex)
         {
+            StartupDiagnostics.Record($"Startup failed: {ex}");
             Log.Fatal(ex, "Failed to start");
             MessageBox.Show(Localization.Loc.F("Chao Desk could not start:\n\n{0}", ex.Message), "Chao Desk",
                 MessageBoxButton.OK, MessageBoxImage.Error);
@@ -125,6 +143,7 @@ public partial class App : Application
 
     private void ExitApp()
     {
+        StartupDiagnostics.Record("ExitApp requested");
         Cleanup();
         Shutdown();
     }
@@ -133,21 +152,25 @@ public partial class App : Application
     {
         if (_cleanedUp) return;
         _cleanedUp = true;
+        StartupDiagnostics.Stage("Cleanup started");
         Log.Information("Shutting down");
         try { _host?.Dispose(); } catch (Exception ex) { Log.Warning(ex, "Host dispose failed"); }
         DesktopAttacher.RefreshDesktop();
         _singleInstance?.Dispose();
         Log.CloseAndFlush();
+        StartupDiagnostics.Stage("Cleanup complete");
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
+        StartupDiagnostics.Record($"OnExit; code={e.ApplicationExitCode}");
         Cleanup();
         base.OnExit(e);
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
+        StartupDiagnostics.Record($"Dispatcher exception: {e.Exception}");
         Log.Error(e.Exception, "Unhandled UI exception");
         e.Handled = true; // keep the wallpaper alive; the error is logged
     }

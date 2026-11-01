@@ -19,6 +19,10 @@
     Produce the app in dist/app and the installer in dist/.
 .PARAMETER Deploy
     Update the installed app in place (after the installer has been run once).
+.PARAMETER VerifyPackage
+    Only verify an existing published app; do not build, download, stop or start anything.
+.PARAMETER PackageDirectory
+    Directory to check with -VerifyPackage. Defaults to dist/app.
 #>
 [CmdletBinding()]
 param(
@@ -26,13 +30,13 @@ param(
     [string]$Configuration = 'Debug',
     [switch]$SkipTests,
     [switch]$Package,
-    [switch]$Deploy
+    [switch]$Deploy,
+    [switch]$VerifyPackage,
+    [string]$PackageDirectory
 )
 
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
-$env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
-$env:DOTNET_NOLOGO = '1'
 if ($Package -or $Deploy) { $Configuration = 'Release' }
 
 function Invoke-Step([string]$Name, [scriptblock]$Body) {
@@ -41,6 +45,114 @@ function Invoke-Step([string]$Name, [scriptblock]$Body) {
     & $Body
     if ($LASTEXITCODE -ne 0) { throw "Step failed: $Name (exit code $LASTEXITCODE)" }
 }
+
+function Assert-PublishedApp([string]$Directory) {
+    $folder = Get-Item -LiteralPath $Directory -ErrorAction Stop
+    if (-not $folder.PSIsContainer) { throw "Package directory is not a folder: $Directory" }
+    $directoryPath = $folder.FullName
+
+    function Require-PackageFile([string]$RelativePath) {
+        $path = Join-Path $directoryPath $RelativePath
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or (Get-Item -LiteralPath $path).Length -eq 0) {
+            throw "Package is missing a non-empty file: $RelativePath"
+        }
+        return $path
+    }
+
+    function Assert-X64Binary([string]$Path) {
+        $reader = [IO.BinaryReader]::new([IO.File]::OpenRead($Path))
+        try {
+            if ($reader.BaseStream.Length -lt 64 -or $reader.ReadUInt16() -ne 0x5A4D) {
+                throw "Package has an invalid Windows binary: $Path"
+            }
+            $reader.BaseStream.Position = 60
+            $peOffset = $reader.ReadInt32()
+            if ($peOffset -lt 64 -or $peOffset -gt $reader.BaseStream.Length - 6) {
+                throw "Package has an invalid PE header: $Path"
+            }
+            $reader.BaseStream.Position = $peOffset
+            if ($reader.ReadUInt32() -ne 0x4550 -or $reader.ReadUInt16() -ne 0x8664) {
+                throw "Package requires an x64 Windows binary: $Path"
+            }
+        }
+        finally { $reader.Dispose() }
+    }
+
+    $required = @(
+        'ChaoDesk.exe', 'ChaoDesk.dll', 'ChaoDesk.deps.json', 'ChaoDesk.runtimeconfig.json',
+        'Microsoft.ML.OnnxRuntime.dll', 'Microsoft.Web.WebView2.Core.dll', 'Microsoft.Web.WebView2.Wpf.dll',
+        'THIRD-PARTY-NOTICES.md'
+    )
+    foreach ($name in $required) { $null = Require-PackageFile $name }
+
+    $deps = Get-Content -LiteralPath (Join-Path $directoryPath 'ChaoDesk.deps.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    $targetName = '.NETCoreApp,Version=v8.0/win-x64'
+    if ($deps.runtimeTarget.name -ne $targetName) {
+        throw "Package was not published for win-x64 (runtimeTarget: '$($deps.runtimeTarget.name)'). Run ./build.ps1 -Package; do not package a Debug build directory."
+    }
+    $targetProperty = $deps.targets.PSObject.Properties[$targetName]
+    if (-not $targetProperty) { throw "Package dependency manifest has no target: $targetName" }
+
+    $config = Get-Content -LiteralPath (Join-Path $directoryPath 'ChaoDesk.runtimeconfig.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    foreach ($framework in 'Microsoft.NETCore.App', 'Microsoft.WindowsDesktop.App') {
+        $match = @($config.runtimeOptions.frameworks | Where-Object { $_.name -eq $framework -and $_.version -match '^8\.0\.\d+$' })
+        if ($match.Count -ne 1) { throw "Package must require the .NET 8 Desktop Runtime: $framework 8.0.x was not found." }
+    }
+    if ($config.runtimeOptions.includedFrameworks) { throw 'Package must be framework-dependent, not self-contained.' }
+
+    # RID-specific publish flattens most asset paths, while deps.json retains the NuGet paths.
+    # Check the resolved target, not every architecture listed by a portable Debug build.
+    $nativeNames = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($library in $targetProperty.Value.PSObject.Properties) {
+        foreach ($kind in 'runtime', 'native') {
+            foreach ($asset in $library.Value.$kind.PSObject.Properties) {
+                if ([IO.Path]::GetExtension($asset.Name) -ne '.dll') { continue }
+                $name = [IO.Path]::GetFileName($asset.Name)
+                $path = Join-Path $directoryPath $name
+                if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+                    $relativePath = $asset.Name.Replace('/', [IO.Path]::DirectorySeparatorChar)
+                    $path = [IO.Path]::GetFullPath((Join-Path $directoryPath $relativePath))
+                    if (-not $path.StartsWith($directoryPath.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) {
+                        throw "Package dependency escapes its directory: $($asset.Name)"
+                    }
+                }
+                if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or (Get-Item -LiteralPath $path).Length -eq 0) {
+                    throw "Package is missing dependency $($asset.Name) from $($library.Name)."
+                }
+                if ($kind -eq 'native') {
+                    Assert-X64Binary $path
+                    $null = $nativeNames.Add($name)
+                }
+            }
+        }
+    }
+    foreach ($name in 'onnxruntime.dll', 'onnxruntime_providers_shared.dll', 'WebView2Loader.dll') {
+        if (-not $nativeNames.Contains($name)) { throw "Package dependency manifest is missing required native library: $name" }
+    }
+    Assert-X64Binary (Join-Path $directoryPath 'ChaoDesk.exe')
+    foreach ($name in 'msvcp140.dll', 'msvcp140_1.dll', 'vcruntime140.dll', 'vcruntime140_1.dll') {
+        Assert-X64Binary (Require-PackageFile $name)
+    }
+
+    $manifest = Get-Content -LiteralPath (Join-Path $root 'models/ocr/models.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    foreach ($model in $manifest.files) {
+        $path = Require-PackageFile (Join-Path 'ocr' $model.name)
+        if ((Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -ne $model.sha256) {
+            throw "Package OCR model failed SHA-256 verification: $($model.name)"
+        }
+    }
+    Write-Host "Verified win-x64 package, native dependencies and OCR model hashes: $directoryPath" -ForegroundColor Green
+}
+
+if ($VerifyPackage) {
+    if ($Package -or $Deploy) { throw '-VerifyPackage cannot be combined with -Package or -Deploy.' }
+    if (-not $PackageDirectory) { $PackageDirectory = Join-Path $root 'dist/app' }
+    Assert-PublishedApp $PackageDirectory
+    return
+}
+if ($PSBoundParameters.ContainsKey('PackageDirectory')) { throw '-PackageDirectory requires -VerifyPackage.' }
+$env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
+$env:DOTNET_NOLOGO = '1'
 
 # ---- 1. Host -------------------------------------------------------------
 # A running Chao Desk from this output folder locks ChaoDesk.exe; ask it to exit cleanly first.
@@ -111,7 +223,7 @@ if (-not ($Package -or $Deploy)) {
     return
 }
 
-# ---- 3. Self-contained publish ---------------------------------------------
+# ---- 3. Framework-dependent publish ---------------------------------------
 $distRoot = Join-Path $root 'dist'
 $appOut = Join-Path $distRoot 'app'
 if (Test-Path $appOut) { Remove-Item -Recurse -Force $appOut }
@@ -130,6 +242,7 @@ Invoke-Step 'Visual C++ runtime for OCR' {
     }
 }
 Copy-Item (Join-Path $root 'THIRD-PARTY-NOTICES.md') $appOut
+Invoke-Step 'Verify published package' { Assert-PublishedApp $appOut }
 
 if ($Deploy) {
     # ---- 3b. Update the installed app in place ----------------------------------------------------

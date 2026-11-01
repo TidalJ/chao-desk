@@ -35,7 +35,7 @@ public class UiSnapshots
                     Loc.Apply(language);
                     var host = FakeHost.Create();
                     var window = new SettingsWindow(host) { Width = 960, Height = 900 };
-                    foreach (var page in new[] { "home", "launcher", "clipboard", "screenshot", "general", "widgets", "properties" })
+                    foreach (var page in new[] { "home", "launcher", "panel", "clipboard", "screenshot", "general", "widgets", "properties" })
                     {
                         window.ShowPage(page);
                         Render(window, Path.Combine(folder, $"settings-{page}-{language}.png"));
@@ -73,13 +73,16 @@ public class UiSnapshots
     }
 
     /// <summary>Lays the window's content out at the window's size and writes it as a PNG.</summary>
-    private static void Render(Window window, string path)
+    internal static void Render(Window window, string path, Brush? panelBackdrop = null, Action<FrameworkElement>? inspect = null)
     {
         Loc.Localize(window);
         var root = (FrameworkElement)window.Content;
         SettingRowLayout.ArrangeAll(root);
         double w = double.IsNaN(window.Width) ? 900 : window.Width, h = double.IsNaN(window.Height) ? 600 : window.Height;
-        var frame = new System.Windows.Controls.Border { Background = window.Background, Width = w, Height = h };
+        // A synthetic matte makes fixed-white glass labels inspectable in layout-only PNGs.
+        // The optional white matte isolates glyph contrast from the optical material.
+        // It is not a desktop capture or a rendering of the live optical material.
+        var frame = new System.Windows.Controls.Border { Background = window is ChaoDesk.Host.Panel.ActionPanelWindow ? panelBackdrop ?? new SolidColorBrush(Color.FromRgb(34,42,51)) : window.Background, Width = w, Height = h };
         window.Content = null;
         frame.Child = root;
         frame.Resources.MergedDictionaries.Add(window.Resources);
@@ -95,6 +98,7 @@ public class UiSnapshots
         frame.UpdateLayout();
         var bitmap = new RenderTargetBitmap((int)(w * 1.25), (int)(h * 1.25), 120, 120, PixelFormats.Pbgra32);
         bitmap.Render(frame);
+        inspect?.Invoke(root);
         var png = new PngBitmapEncoder();
         png.Frames.Add(BitmapFrame.Create(bitmap));
         using var file = File.Create(path);
@@ -109,6 +113,8 @@ public class UiSnapshots
         private readonly AppSettings _settings = new AppSettings().Normalize();
         private WallpaperLibrary? _library;
         private Update.UpdateService? _updates;
+        private Panel.PanelLayout? _panelActions;
+        internal bool HotkeysSuspended { get; private set; }
 
         public static ISettingsHost Create() => Create<ISettingsHost, FakeHost>();
 
@@ -116,6 +122,10 @@ public class UiSnapshots
         {
             if (method == null) return null;
             string name = method.Name;
+            if (name == "get_PanelActions") return _panelActions ??= new Panel.PanelLayout(_settings.PanelItems, items => _settings.PanelItems = items);
+            if (name == "SuspendHotkeys") { HotkeysSuspended = (bool)args![0]!; return null; }
+            if (name == "get_PanelGlass") return _settings.PanelGlass;
+            if (name == "set_PanelGlass") { _settings.PanelGlass = (Panel.GlassOptions)args![0]!; return null; }
             if (name.StartsWith("add_") || name.StartsWith("remove_") || name.StartsWith("set_")) return null;
             if (name == "get_Settings") return _settings;
             if (name == "get_Library")
@@ -133,11 +143,14 @@ public class UiSnapshots
             if (name == "CurrentProperties") return _library?.Find("lotus-pond")?.Manifest.MergeProperties(null) ?? new JsonObject();
             if (name == "HotkeyText") return (string)args![0]! switch
             {
+                "panel" => _settings.PanelHotkey,
                 "launcher" => _settings.LauncherHotkey, "clipboard" => _settings.ClipboardHotkey, "screenshot" => _settings.ScreenshotHotkey,
                 "quickshot" => _settings.QuickScreenshotHotkey, "scrollshot" => _settings.ScrollScreenshotHotkey, "pin" => _settings.PinHotkey,
                 "pinstoggle" => _settings.PinsToggleHotkey, "ocr" => _settings.OcrHotkey, _ => "",
             };
             if (name == "get_Theme") return "system";
+            if (name == "get_PanelMouseMode") return _settings.PanelMouseTrigger;
+            if (name == "get_PanelMaterial") return _settings.PanelMaterial;
             if (name == "get_Language") return Loc.Language;
             if (name == "get_TranslateEngine" || name == "get_TranslateTarget") return "auto";
             if (name == "get_OcrLanguage") return "auto";

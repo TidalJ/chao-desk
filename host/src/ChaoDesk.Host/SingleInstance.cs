@@ -13,6 +13,9 @@ public sealed class SingleInstance : IDisposable
     private const string MutexName = @"Local\ChaoDesk.SingleInstance";
     private const string ShowEventName = @"Local\ChaoDesk.ShowSettings";
     private const string ExitEventName = @"Local\ChaoDesk.Exit";
+    private const string PanelEventName = @"Local\ChaoDesk.Panel";
+    private readonly EventWaitHandle? _panelEvent;
+    private readonly RegisteredWaitHandle? _panelWait;
 
     private readonly Mutex _mutex;
     private readonly EventWaitHandle? _showEvent;
@@ -22,7 +25,7 @@ public sealed class SingleInstance : IDisposable
 
     public bool IsPrimary { get; }
 
-    public SingleInstance(Action onShowRequested, Action onExitRequested)
+    public SingleInstance(Action onShowRequested, Action onExitRequested, Action? onPanelRequested = null)
     {
         _mutex = new Mutex(initiallyOwned: true, MutexName, out bool created);
         IsPrimary = created;
@@ -32,14 +35,16 @@ public sealed class SingleInstance : IDisposable
         _exitEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ExitEventName);
         _showWait = ThreadPool.RegisterWaitForSingleObject(_showEvent, (_, _) => onShowRequested(), null, Timeout.Infinite, false);
         _exitWait = ThreadPool.RegisterWaitForSingleObject(_exitEvent, (_, _) => onExitRequested(), null, Timeout.Infinite, false);
+        _panelEvent = new EventWaitHandle(false, EventResetMode.AutoReset, PanelEventName);
+        _panelWait = ThreadPool.RegisterWaitForSingleObject(_panelEvent, (_, _) => onPanelRequested?.Invoke(), null, Timeout.Infinite, false);
     }
 
     /// <summary>Signal the running instance. Returns false if no instance is running.</summary>
-    public static bool SignalRunningInstance(bool exit)
+    public static bool SignalRunningInstance(bool exit, bool panel = false)
     {
         try
         {
-            using var ev = EventWaitHandle.OpenExisting(exit ? ExitEventName : ShowEventName);
+            using var ev = EventWaitHandle.OpenExisting(exit ? ExitEventName : panel ? PanelEventName : ShowEventName);
             ev.Set();
             return true;
         }
@@ -57,6 +62,8 @@ public sealed class SingleInstance : IDisposable
     public void Dispose()
     {
         _showWait?.Unregister(null);
+        _panelWait?.Unregister(null);
+        _panelEvent?.Dispose();
         _exitWait?.Unregister(null);
         _showEvent?.Dispose();
         _exitEvent?.Dispose();

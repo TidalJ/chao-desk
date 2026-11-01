@@ -15,6 +15,26 @@ public class WallpaperManifestTests
     }
 
     [Fact]
+    public void BuiltOutputShipsCurrentWallpaperAndAllFourScenes()
+    {
+        string source = RepoFile("wallpapers", "lotus-pond");
+        string bundled = Path.Combine(AppContext.BaseDirectory, "wallpapers", "lotus-pond");
+        foreach (string file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
+        {
+            string relative = Path.GetRelativePath(source, file);
+            if (relative.StartsWith("tests" + Path.DirectorySeparatorChar) || relative.StartsWith("node_modules" + Path.DirectorySeparatorChar)) continue;
+            string output = Path.Combine(bundled, relative);
+            Assert.True(File.Exists(output), $"Missing bundled wallpaper file: {relative}");
+            Assert.Equal(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(file)),
+                System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(output)));
+        }
+        var manifest = WallpaperManifest.Load(bundled);
+        Assert.Empty(manifest.Errors);
+        Assert.Equal(new[] { "Celadon basin", "Wisteria garden", "Summer lotus", "Autumn leaves" },
+            manifest.Properties.Single(p => p.Key == "scene").Options);
+    }
+
+    [Fact]
     public void ParsesTheLotusPondManifest()
     {
         var m = WallpaperManifest.Parse(File.ReadAllText(RepoFile("wallpapers", "lotus-pond", "wallpaper.json")));

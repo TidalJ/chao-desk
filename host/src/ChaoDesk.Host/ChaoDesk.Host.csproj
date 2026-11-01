@@ -11,7 +11,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>ChaoDesk</AssemblyName>
     <RootNamespace>ChaoDesk.Host</RootNamespace>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Product>Chao Desk</Product>
     <ApplicationIcon>Assets\chaodesk.ico</ApplicationIcon>
   </PropertyGroup>
@@ -26,6 +26,10 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Assets\chaodesk.ico" />
+    <Resource Include="Panel\GlassLens.ps" />
+    <Resource Include="Panel\GlassGlyph.ps" />
+    <Resource Include="Panel\Maps\*.jpg;Panel\Maps\*.png;Panel\Maps\LICENSE.txt" />
+    <EmbeddedResource Include="Panel\Maps\LIQUID-GLASS-STUDIO-LICENSE.txt" />
     <EmbeddedResource Include="Launcher\pinyin.txt" />
     <EmbeddedResource Include="Localization\zh\*.txt" />
   </ItemGroup>
@@ -38,5 +42,15 @@
   <ItemGroup>
     <None Include="..\..\..\models\ocr\*.onnx;..\..\..\models\ocr\*.txt" Link="ocr\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <!-- Always refresh the built-in static package, even for dotnet build/test. A stale Debug
+       wallpaper used to silently overwrite the installed scene selector during app-only updates. -->
+  <ItemGroup>
+    <Content Include="..\..\..\wallpapers\lotus-pond\**\*"
+             Exclude="..\..\..\wallpapers\lotus-pond\tests\**;..\..\..\wallpapers\lotus-pond\node_modules\**"
+             Link="wallpapers\lotus-pond\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="Always" CopyToPublishDirectory="Always" />
+  </ItemGroup>
+
 
 </Project>

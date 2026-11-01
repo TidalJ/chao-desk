@@ -22,7 +22,7 @@ public static class Logging
                 fileSizeLimitBytes: 10 * 1024 * 1024,
                 rollOnFileSizeLimit: true,
                 shared: true,
-                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] [pid:{Pid}] {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
     }
 }

@@ -61,6 +61,11 @@ public sealed class AppHost : ISettingsHost, IDisposable
     private readonly ImageSource? _appIcon;
     private LauncherWindow? _launcher;
     private ClipboardWindow? _clipWindow;
+    private Panel.ActionPanelWindow? _actionPanel;
+    private Panel.PanelLayout? _panelActions;
+    private PanelMouseHook? _panelMouse;
+    private int _panelPressPending, _panelVisibilityGeneration;
+    private IntPtr _panelPointerOwner;
     private bool _hotkeysSuspended;
     private readonly ScreenshotService _screenshots;
     private QuickLookHook? _quickLookHook;
@@ -95,6 +100,7 @@ public sealed class AppHost : ISettingsHost, IDisposable
 
         _tray = new TrayIcon(showSettings: true, showDevTools: devTools);
         _tray.LauncherRequested += ToggleLauncher;
+        _tray.PanelRequested += TogglePanel;
         _tray.ClipboardRequested += ToggleClipboard;
         _tray.SettingsRequested += () => ShowSettings();
         _tray.AddTaskRequested += () => ShowSettings("tasks");
@@ -183,7 +189,9 @@ public sealed class AppHost : ISettingsHost, IDisposable
 
     public async Task StartAsync()
     {
+        StartupDiagnostics.Stage("Resolving wallpaper package");
         _current = ResolvePackage(_settings.CurrentWallpaperId);
+        StartupDiagnostics.Stage($"Starting desktop layer; wanted={WantsDesktopLayer}; package={_current?.Id ?? "<missing>"}");
         if (WantsDesktopLayer) await StartWallpaperAsync();
         else OnManagerStateChanged();
     }
@@ -286,9 +294,9 @@ public sealed class AppHost : ISettingsHost, IDisposable
         {
             _settingsWindow = new SettingsWindow(this);
             _settingsWindow.Closed += (_, _) => _settingsWindow = null;
-            _settingsWindow.ShowPage(page);
-            _settingsWindow.Show();
         }
+        _settingsWindow.ShowPage(page);
+        if (!_settingsWindow.IsVisible) _settingsWindow.Show();
         if (_settingsWindow.WindowState == WindowState.Minimized) _settingsWindow.WindowState = WindowState.Normal;
         _settingsWindow.Activate();
         _settingsWindow.Topmost = true; // bring to front even when launched from a second instance
@@ -296,6 +304,12 @@ public sealed class AppHost : ISettingsHost, IDisposable
     }
 
     // ---- ISettingsHost -----------------------------------------------------------------------------
+
+    public Panel.PanelLayout PanelActions => _panelActions ??= new Panel.PanelLayout(_settings.PanelItems, items => {
+        _settings.PanelItems = items;
+        ScheduleSave();
+        _actionPanel?.RefreshActions();
+    });
 
     public AppSettings Settings => _settings;
     public WallpaperLibrary Library => _library;
@@ -818,6 +832,38 @@ public sealed class AppHost : ISettingsHost, IDisposable
 
     // ---- Launcher, clipboard, file search ----------------------------------------------------------
 
+    public void TogglePanel()
+    {
+        bool created = _actionPanel == null;
+        _actionPanel ??= new Panel.ActionPanelWindow(_clipHistory, _clipMonitor, () => _settings.ClipboardEnabled,
+            action =>
+            {
+                switch (action)
+                {
+                    case "launcher": ToggleLauncher(); break;
+                    case "clipboard": ToggleClipboard(); break;
+                    case "screenshot": _screenshots.StartRegion(); break;
+                    case "ocr": _screenshots.StartRegion(CaptureMode.Ocr); break;
+                    case "pin": _screenshots.StartPin(); break;
+                    case "scrollshot": _screenshots.StartRegion(CaptureMode.Scroll); break;
+                    case "quickshot": _screenshots.QuickCapture(); break;
+                    case "pinclipboard": _screenshots.PinClipboard(); break;
+                    case "ocrclipboard": RecognizeClipboard(); break;
+                    case "togglepins": _screenshots.Pins.ToggleAll(); break;
+                    case "closepins": _screenshots.Pins.CloseAll(); break;
+                    case "wallpaperpause": if (_wallpaperRunning && !_widgetsOnly) { _manager.SetUserPaused(!_manager.IsUserPaused); OnManagerStateChanged(); } break;
+                    case "lock": NativeMethods.LockWorkStation(); break;
+                    case "settings": ShowSettings(); break;
+                }
+            }, TranslateAsync, () => _settings.PanelMaterial,
+            PanelActions, () => _settings.PanelGlass, () => ShowSettings("panel"));
+        if (created) _actionPanel.IsVisibleChanged += (_, _) => {
+            Interlocked.Increment(ref _panelVisibilityGeneration);
+            UpdatePanelMouse();
+        };
+        _actionPanel.Toggle();
+    }
+
     private void ToggleLauncher()
     {
         _launcher ??= new LauncherWindow(new LauncherContext
@@ -858,6 +904,7 @@ public sealed class AppHost : ISettingsHost, IDisposable
     {
         var list = new List<LauncherCommand>
         {
+            new() { Title = Loc.T("Action panel"), Keywords = ["panel", "quicker", "mianban"], Run = () => _messageWindow.Dispatch(TogglePanel) },
             new() { Title = Loc.T("Chao Desk settings"), Subtitle = Loc.T("Hotkeys, clipboard, file search and wallpaper"), Keywords = ["preferences", "options"], Run = () => ShowSettings() },
         };
         if (_settings.ClipboardEnabled)
@@ -955,6 +1002,7 @@ public sealed class AppHost : ISettingsHost, IDisposable
 
     private HotkeyDef[] HotkeyDefs =>
     [
+        new("panel", () => _settings.PanelHotkey, v => _settings.PanelHotkey = v, TogglePanel, () => true),
         new("launcher", () => _settings.LauncherHotkey, v => _settings.LauncherHotkey = v, ToggleLauncher, () => true),
         new("clipboard", () => _settings.ClipboardHotkey, v => _settings.ClipboardHotkey = v, ToggleClipboard, () => _settings.ClipboardEnabled),
         new("screenshot", () => _settings.ScreenshotHotkey, v => _settings.ScreenshotHotkey = v, () => _screenshots.StartRegion(), () => true),
@@ -983,6 +1031,66 @@ public sealed class AppHost : ISettingsHost, IDisposable
             foreach (var def in HotkeyDefs)
                 if (def.Enabled()) RegisterHotkey(def.Name, def.Get(), def.Run);
         _tray.SetHotkeys(_settings.LauncherHotkey, _settings.ClipboardHotkey, _settings.ClipboardEnabled, _settings.ScreenshotHotkey);
+        _tray.SetPanelHotkey(_settings.PanelHotkey);
+        UpdatePanelMouse();
+    }
+
+    private void UpdatePanelMouse()
+    {
+        if (_disposed) { _panelMouse?.SetPressObserver(null); return; }
+        string mode = _hotkeysSuspended ? "none" : _settings.PanelMouseTrigger;
+        bool observe = _actionPanel?.IsVisible == true;
+        Volatile.Write(ref _panelPointerOwner,observe ? new System.Windows.Interop.WindowInteropHelper(_actionPanel!).Handle : IntPtr.Zero);
+        // Hotkey-only panels still need outside-press dismissal. Reuse this
+        // same hook while visible; never install a second global mouse hook.
+        if (mode == "none" && !observe) { _panelMouse?.Dispose(); _panelMouse = null; return; }
+        if (_panelMouse == null) _panelMouse = new PanelMouseHook(mode, () => _messageWindow.Dispatch(TogglePanel));
+        else _panelMouse.SetMode(mode);
+        _panelMouse.SetPressObserver(observe ? OnPanelPointerPress : null);
+    }
+
+    private void OnPanelPointerPress(PanelMouseHook.PointerPress press)
+    {
+        // Do not spend the single pending slot on normal panel input;
+        // otherwise a later outside press could be dropped behind it.
+        if (press.TargetWindow != IntPtr.Zero &&
+            press.TargetWindow == Volatile.Read(ref _panelPointerOwner)) return;
+        // One outstanding UI dispatch is sufficient for dismissal. The hook
+        // never waits for WPF and an old press cannot close a newly opened pane.
+        if (Interlocked.CompareExchange(ref _panelPressPending,1,0) != 0) return;
+        int generation = Volatile.Read(ref _panelVisibilityGeneration);
+        try {
+            _messageWindow.Dispatch(() => {
+                Interlocked.Exchange(ref _panelPressPending,0);
+                if (!_disposed && generation == Volatile.Read(ref _panelVisibilityGeneration))
+                    _actionPanel?.HandlePointerPress(press);
+            });
+        }
+        catch { Interlocked.Exchange(ref _panelPressPending,0); throw; }
+    }
+
+    public string PanelMouseMode
+    {
+        get => _settings.PanelMouseTrigger;
+        set { if (!PanelMouseTrigger.Modes.Contains(value)) return; _settings.PanelMouseTrigger = value; ApplyHotkeys(); ScheduleSave(); }
+    }
+
+    public string PanelMaterial
+    {
+        get => _settings.PanelMaterial;
+        set { if (value is not ("liquid" or "soft" or "smoked")) return; _settings.PanelMaterial = value; _actionPanel?.RefreshMaterial(); ScheduleSave(); }
+    }
+
+    public Panel.GlassOptions PanelGlass
+    {
+        get => _settings.PanelGlass;
+        set { _settings.PanelGlass = value.Normalize(); _actionPanel?.UpdateGlassOptions(); ScheduleSave(); }
+    }
+
+    public void PreviewPanelGlass()
+    {
+        if (_actionPanel == null) TogglePanel();
+        _actionPanel!.ShowMaterialPreview();
     }
 
     private void RegisterHotkey(string which, string text, Action action)
@@ -1019,6 +1127,7 @@ public sealed class AppHost : ISettingsHost, IDisposable
     {
         switch (tool)
         {
+            case "panel": _messageWindow.Dispatch(TogglePanel); break;
             case "launcher": _messageWindow.Dispatch(ToggleLauncher); break;
             case "clipboard": _messageWindow.Dispatch(ToggleClipboard); break;
             case "screenshot": AfterLauncherCloses(() => _screenshots.StartRegion()); break;
@@ -1346,6 +1455,8 @@ public sealed class AppHost : ISettingsHost, IDisposable
         _settingsWindow?.Close();
         _launcher?.Close();
         _clipWindow?.Close();
+        _actionPanel?.Close();
+        _panelMouse?.Dispose();
         _hotkeys.Dispose();
         _quickLookHook?.Dispose();
         _screenshots.Pins.SaveNow();

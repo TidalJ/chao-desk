@@ -1,0 +1,37 @@
+{0} of {1} actions	{0} / {1} 项操作
+Action content	操作内容
+Add action	添加操作
+Add an app, a file or a tool you use often. Arrange actions in the order you want them on the panel.	添加常用的软件、文件或工具，并按你希望的面板顺序排列。
+All files (*.*)|*.*	所有文件 (*.*)|*.*
+Already on your panel	已添加到面板
+Apps and shortcuts (*.exe;*.lnk)|*.exe;*.lnk|All files (*.*)|*.*	软件和快捷方式 (*.exe;*.lnk)|*.exe;*.lnk|所有文件 (*.*)|*.*
+Arguments (optional)	启动参数（可选）
+Back	返回
+Choose a tool to add to your panel.	选择要添加到面板的工具。
+Choose an action type	选择操作类型
+Choose file	选择文件
+Choose folder	选择文件夹
+CMD / Batch	CMD / 批处理
+Configure it here, then use it from your quick panel.	在这里配置，随后从快捷面板使用。
+Could not read this script file. Your draft has been kept.	无法读取此脚本文件，已保留当前草稿。
+Edit	编辑
+For example, Ctrl+Shift+T. Record keys, or type a combination. Esc cancels recording.	例如 Ctrl+Shift+T。可以录入按键或直接输入组合键，按 Esc 取消录入。
+Key combination	组合键
+Line breaks and spaces are kept exactly as entered.	换行和空格会按原样保留。
+Load script file	载入脚本文件
+PowerShell	PowerShell
+Press a key combination. Esc cancels recording.	请按下组合键，按 Esc 取消录入。
+Record keys	录入按键
+Remove an action to make room for another.	移除一项操作后即可继续添加。
+Runs with CMD. You can enter one command or several lines.	使用 CMD 执行，可以输入一条或多行命令。
+Save action	保存操作
+Script	脚本
+Script engine	脚本引擎
+Script files (*.ps1;*.cmd;*.bat)|*.ps1;*.cmd;*.bat|All files (*.*)|*.*	脚本文件 (*.ps1;*.cmd;*.bat)|*.ps1;*.cmd;*.bat|所有文件 (*.*)|*.*
+Set up this action. Saving adds it to your panel.	填写操作内容，保存后添加到面板。
+Text to send	要发送的文本
+Update this action. Its position on your panel stays the same.	修改操作内容，保存后保留原有位置。
+Use an http or https address. An address without a scheme uses https.	使用 http 或 https 网址，省略协议时会自动补上 https。
+Website address	网址
+Working directory (optional)	工作目录（可选）
+Your panel starts here	开始设置你的面板

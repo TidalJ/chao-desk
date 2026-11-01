@@ -28,13 +28,15 @@ The wallpaper is one module among the tools and can be turned off.
 
 1. Download `ChaoDeskSetup-<version>.exe` from the
    [latest release](https://github.com/TidalJ/chao-desk/releases/latest) (or build it with
-   `./build.ps1 -Package`, see below) and run it. No admin rights are needed; it installs to
-   `%LOCALAPPDATA%\Programs\ChaoDesk`.
+   `./build.ps1 -Package`, see below) and run it. The app installs per user to
+   `%LOCALAPPDATA%\Programs\ChaoDesk`; installing a missing .NET runtime requires administrator permission.
 2. **SmartScreen:** the installer is not code-signed, so Windows may show "Windows protected your
    PC". Click **More info → Run anyway**.
-3. Chao Desk needs the **.NET 8 Desktop Runtime**; the wallpaper also needs the **Microsoft Edge
-   WebView2 Runtime** (ships with Windows 11). If either is missing, the installer downloads it from Microsoft and
-   installs it first (.NET asks for administrator permission once).
+3. Chao Desk needs the **.NET 8 Desktop Runtime (x64)**; .NET 9/10 alone does not replace it. The wallpaper
+   also needs the **Microsoft Edge WebView2 Runtime**. Setup checks both, downloads missing components from
+   Microsoft, and verifies them before installing or replacing the app. A cancelled download, failed runtime
+   installation or required restart stops setup before it changes the app; retry after resolving the issue.
+   OCR models and the required Visual C++ runtime DLLs are included in the app package.
 
 **Updates:** *Settings → General → Updates* checks GitHub for a newer release (also once a day on its
 own, which can be turned off). **Download and install** fetches the installer, checks its SHA-256 and
@@ -45,6 +47,23 @@ It lives in the notification area: right-click the lotus icon for the launcher, 
 Installed apps → Chao Desk*.
 
 ## Using it
+
+### Action panel (mouse middle button / Ctrl+Space)
+
+Click the mouse middle button or press **Ctrl+Space** to open your shortcut panel near the pointer (three columns, up to five rows / 15 actions). New panels start with Reopen, Clipboard, Screenshot, OCR and Pin; existing selections stay intact. Drag the title or empty space to move it. Each new opening follows the pointer on its current monitor. Click outside to dismiss it; **Esc** returns from a tool to the buttons, then dismisses the panel.
+
+The header's settings gear opens **Settings → Action panel**. In **Appearance and shortcuts**, choose middle-click, double middle-click, mouse back/forward button, Ctrl+right-click, Alt+left-click, or disable mouse triggering. Only the selected gesture is consumed. Configure the keyboard shortcut, select **Liquid glass**, **Soft glass** or **Smoked glass**, and adjust the glass appearance there.
+
+In **Manage actions**, add built-in tools or configure an app, file, folder, HTTP(S) website, key combination, text, command or script. Edit, reorder and remove actions in this page; the quick panel contains only the actions and its settings gear. Commands use CMD, while scripts support PowerShell or CMD. Changes persist across restarts, saving never executes an action, and removing an action leaves its target file intact.
+
+Double-clicking the tray icon opens the main Home/settings window. The tray menu also has a separate Action panel entry. `ChaoDesk.exe --panel` opens the quick panel explicitly.
+
+The glass samples the live region behind the panel, with displacement textures, curved edge refraction, slight colour dispersion and pointer lighting. Text is rendered separately. The first texture is prepared before showing; a screen-anchored capture region extends beyond the panel so movement can reuse it without rebuilding controls. Sampling stops while hidden and no images are saved. To prevent self-reflection the popup is excluded from system screenshots. Unsupported capture or shader paths show a fallback status.
+
+The compiled shader is shipped as `Panel/GlassLens.ps`; ordinary builds need no C++ toolchain. When editing `GlassLens.hlsl`, regenerate it with Windows SDK `fxc /T ps_3_0 /E main /O3 /Fo GlassLens.ps GlassLens.hlsl`. Native-window tests verify background exclusion, changing/moving backgrounds, and hardware-rendered optical displacement, including an individual button lens.
+
+Normal `dotnet build` and `dotnet test` now copy the current bundled wallpaper, including all four pond scenes, into their output. This prevents an old wallpaper manifest in the Debug folder from overwriting newer installed content during an update.
+
 
 ### Launcher (Alt+Space)
 
@@ -152,8 +171,8 @@ The Debug app is at `host/src/ChaoDesk.Host/bin/Debug/net8.0-windows/ChaoDesk.ex
 Bump `<Version>` in `host/src/ChaoDesk.Host/ChaoDesk.Host.csproj`, commit, then push a matching tag:
 
 ```powershell
-git tag v1.1.0
-git push origin main v1.1.0
+git tag v1.2.0
+git push origin main v1.2.0
 ```
 
 GitHub Actions (`.github/workflows/release.yml`) builds, tests and packages on Windows, then publishes a

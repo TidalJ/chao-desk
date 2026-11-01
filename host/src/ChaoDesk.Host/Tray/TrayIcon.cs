@@ -14,9 +14,11 @@ public sealed class TrayIcon : IDisposable
     private readonly MenuItem _launcherItem;
     private readonly MenuItem _clipboardItem;
     private readonly MenuItem _screenshotItem;
+    private readonly MenuItem _panelItem;
     private readonly Separator _pauseSeparator;
 
     public event Action? LauncherRequested;
+    public event Action? PanelRequested;
     public event Action? ClipboardRequested;
     public event Action? ScreenshotRequested;
     public event Action? SettingsRequested;
@@ -28,6 +30,10 @@ public sealed class TrayIcon : IDisposable
     public TrayIcon(bool showSettings, bool showDevTools)
     {
         var menu = new ContextMenu();
+
+        _panelItem = new MenuItem { Header = Loc.T("Action panel") };
+        _panelItem.Click += (_, _) => PanelRequested?.Invoke();
+        menu.Items.Add(_panelItem);
 
         _launcherItem = new MenuItem { Header = Loc.T("Search apps and files") };
         _launcherItem.Click += (_, _) => LauncherRequested?.Invoke();
@@ -103,6 +109,8 @@ public sealed class TrayIcon : IDisposable
         // Notification-area tooltips are limited to 127 characters.
         _icon.ToolTipText = text.Length > 127 ? text[..127] : text;
     }
+
+    public void SetPanelHotkey(string hotkey) => _panelItem.InputGestureText = hotkey;
 
     private static System.Drawing.Icon LoadIcon()
     {
