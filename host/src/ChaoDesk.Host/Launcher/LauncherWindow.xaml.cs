@@ -69,7 +69,7 @@ public partial class LauncherWindow : Window
     private readonly Border _detailsButton;
     private readonly DispatcherTimer _leaveWatch;
     private bool _detailsOn;
-    private int _detailsToggles; // a closing details column ignores its end if it was reopened meanwhile
+    private bool _resizingDetails;
 
     public LauncherWindow(LauncherContext ctx)
     {
@@ -621,42 +621,44 @@ public partial class LauncherWindow : Window
     // ---- Details column -------------------------------------------------------------------------------
 
     /// <summary>
-    /// Shows or hides the details column; without it the window is just the list. The window glides wider or
-    /// narrower with its left edge kept, so the list never moves, while the column fades in (or is swept away).
+    /// Shows or hides the details column, keeping the left edge fixed and the native window frame intact.
+    /// Native previews load after expansion, so their child windows do not repaint during the width animation.
     /// </summary>
     private void SetDetails(bool on, bool animate)
     {
         _detailsOn = on;
         IconButton.Set(_detailsButton, on, null, on ? Loc.T("Hide the details and preview") : Loc.T("Show the details and preview"));
-        int toggle = ++_detailsToggles;
         animate &= IsVisible;
+        _resizingDetails = animate;
         if (on)
         {
             PreviewHost.Visibility = Visibility.Visible;
             _detailsFor = null;
-            ShowDetails();
-            if (animate) { Motion.Reveal(PreviewHost); Motion.GlideWidth(this, ListWidth + DetailsWidth); }
-            else { PreviewHost.BeginAnimation(OpacityProperty, null); Width = ListWidth + DetailsWidth; }
+            PreviewHost.BeginAnimation(OpacityProperty, null);
+            PreviewHost.RenderTransform = Transform.Identity;
+            PopupWidthAnimation.Resize(this, ListWidth + DetailsWidth, animate, () =>
+            {
+                _resizingDetails = false;
+                if (IsVisible) ShowDetails();
+            });
             return;
         }
         _previewDebounce?.Stop();
-        void Closed()
+        PreviewHost.BeginAnimation(OpacityProperty, null);
+        _preview?.Release();
+        PreviewSlot.Content = null;
+        _detailsFor = null;
+        PopupWidthAnimation.Resize(this, ListWidth, animate, () =>
         {
-            if (toggle != _detailsToggles) return; // opened again meanwhile
+            _resizingDetails = false;
             PreviewHost.Visibility = Visibility.Collapsed;
-            PreviewHost.BeginAnimation(OpacityProperty, null);
-            _preview?.Release();
-            PreviewSlot.Content = null;
-            _detailsFor = null;
-        }
-        if (animate) Motion.GlideWidth(this, ListWidth, Closed); // the edge sweeps over the column, like a drawer shutting
-        else { Width = ListWidth; Closed(); }
+        });
     }
 
     /// <summary>Fills the details column for the selected result (files: a preview; others: what they are).</summary>
     private void ShowDetails()
     {
-        if (!_detailsOn) return;
+        if (!_detailsOn || _resizingDetails) return;
         var item = Results.SelectedItem as LauncherItem;
         // While typing the list is cleared and refilled on every key: keep the old details until a new row is selected.
         if (item == null || item == _detailsFor) return;

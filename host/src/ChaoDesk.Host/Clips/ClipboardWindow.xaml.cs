@@ -81,13 +81,13 @@ public partial class ClipboardWindow : Window
     private (string Id, Translation? Result)? _translation;
     private CancellationTokenSource? _translating;
     private readonly Dictionary<string, Translation> _translated = new(); // by entry: hiding and showing again is instant
-    private int _previewToggles; // a closing preview ignores its end if it was reopened meanwhile
     private int _imageLoads;     // only the newest picture preview is shown
 
     private string _lastQuery = "";
 
     /// <summary>The preview column is shown (the button in the search bar toggles it; the app remembers it).</summary>
     public bool PreviewOn { get; private set; }
+    private bool _resizingPreview;
     public event Action<bool>? PreviewToggled;
 
     public ClipboardWindow(ClipboardHistory history, ClipboardMonitor monitor, bool showPreview)
@@ -225,33 +225,35 @@ public partial class ClipboardWindow : Window
     }
 
     /// <summary>
-    /// Shows or hides the preview column; without it the window is just the list. The window glides wider or
-    /// narrower with its left edge kept, so the list never moves, while the column fades in or out beside it.
+    /// Shows or hides the preview column, keeping the left edge fixed and the native window frame intact.
+    /// Native previews load after expansion, so their child windows do not repaint during the width animation.
     /// </summary>
     private void SetPreview(bool on, bool animate)
     {
         PreviewOn = on;
         IconButton.Set(_previewButton, on, null, on ? Loc.T("Hide the preview") : Loc.T("Show the preview"));
-        int toggle = ++_previewToggles;
         animate &= IsVisible;
+        _resizingPreview = animate;
         if (on)
         {
             PreviewPanel.Visibility = Visibility.Visible;
-            ShowPreview((Results.SelectedItem as ClipRow)?.Item);
-            if (animate) { Motion.Reveal(PreviewPanel); Motion.GlideWidth(this, FullWidth); }
-            else { PreviewPanel.BeginAnimation(OpacityProperty, null); Width = FullWidth; }
+            PreviewPanel.BeginAnimation(OpacityProperty, null);
+            PreviewPanel.RenderTransform = Transform.Identity;
+            PopupWidthAnimation.Resize(this, FullWidth, animate, () =>
+            {
+                _resizingPreview = false;
+                if (IsVisible) ShowPreview((Results.SelectedItem as ClipRow)?.Item);
+            });
             return;
         }
-        ReleaseFilePreview(); // a document's preview is another window: it cannot fade or be cropped, so it goes first
+        ReleaseFilePreview();
         PreviewFile.Visibility = Visibility.Collapsed;
-        void Closed()
+        PreviewPanel.BeginAnimation(OpacityProperty, null);
+        PopupWidthAnimation.Resize(this, ListWidth, animate, () =>
         {
-            if (toggle != _previewToggles) return; // opened again meanwhile
+            _resizingPreview = false;
             PreviewPanel.Visibility = Visibility.Collapsed;
-            PreviewPanel.BeginAnimation(OpacityProperty, null);
-        }
-        if (animate) Motion.GlideWidth(this, ListWidth, Closed); // the edge sweeps over the column, like a drawer shutting
-        else { Width = ListWidth; Closed(); }
+        });
     }
 
     private void HideUnlessPinned()
@@ -453,7 +455,7 @@ public partial class ClipboardWindow : Window
 
     private void ShowPreview(ClipItem? item)
     {
-        if (!PreviewOn) return;
+        if (!PreviewOn || _resizingPreview) return;
         string? file = item is { Kind: ClipKind.Files, Files.Length: 1 } && (File.Exists(item.Files[0]) || Directory.Exists(item.Files[0])) ? item.Files[0] : null;
         PreviewFile.Visibility = file != null ? Visibility.Visible : Visibility.Collapsed;
         PreviewText.Visibility = item is { Kind: not ClipKind.Image } && file == null ? Visibility.Visible : Visibility.Collapsed;
