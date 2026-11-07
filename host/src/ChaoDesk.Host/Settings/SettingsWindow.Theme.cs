@@ -114,7 +114,7 @@ public partial class SettingsWindow
 
         // Tabs.
         var tabs = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 18, 0, 0) };
-        string[] names = ["Colours and background", "Cards and corners", "Text", "Sidebar", "Density and motion"];
+        string[] names = ["Colours and background", "Cards and corners", "Text", "Sidebar", "Action panel", "Density and motion"];
         for (int i = 0; i < names.Length; i++)
         {
             bool on = i == _appearanceTab;
@@ -139,6 +139,7 @@ public partial class SettingsWindow
             case 1: CardsTab(rows); break;
             case 2: TextTab(rows); break;
             case 3: SidebarTab(rows); break;
+            case 4: PanelTab(rows); break;
             default: DensityTab(rows); break;
         }
         stack.Children.Add(rows);
@@ -255,7 +256,7 @@ public partial class SettingsWindow
         var s = look.Shades;
         var st = look.Style;
         var root = new Grid { Width = w, Height = h, ClipToBounds = true };
-        foreach (var layer in BackdropLayers(look, mini: true)) root.Children.Add(layer);
+        foreach (var layer in ThemeBackdrop.Layers(look, mini: true)) root.Children.Add(layer);
         Brush Solid(Color c) => new SolidColorBrush(c);
         Brush accent = look.Version.AccentEnd is { } end ? new LinearGradientBrush(s.Accent, end, 45) : Solid(s.Accent);
         byte alpha = st.Card switch { "glass" => (byte)(255 * st.CardOpacity), "outline" => (byte)0, _ => (byte)255 };
@@ -332,7 +333,7 @@ public partial class SettingsWindow
                     hex => Commit(WithBackdrop(Current, new("solid", [hex]))), hex => ThemeManager.Preview(WithBackdrop(Current, new("solid", [hex]))));
             else
             {
-                var strip = new Border { Width = 220, Height = 24, CornerRadius = new CornerRadius(12), Margin = new Thickness(0, 0, 12, 0), Background = GradientOf(colours, 0) };
+                var strip = new Border { Width = 220, Height = 24, CornerRadius = new CornerRadius(12), Margin = new Thickness(0, 0, 12, 0), Background = GradientOf(colours, 90) };
                 line.Children.Add(strip);
                 for (int i = 0; i < colours.Length; i++)
                 {
@@ -365,35 +366,55 @@ public partial class SettingsWindow
             AddRow(rows, Loc.T("Picture"), change);
         }
 
-        // Accent: the theme's own, plain presets, gradient presets, any colour.
-        var accents = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        // Accent: the theme's own, or one's own — plain or a gradient — from presets or any colours.
         var a = Current;
-        var own = ThemeManager.Resolve(ThemeManager.Current, Adjust.None, modeDark).Version;
-        var ownSwatch = GradientSwatch(ThemeManager.Hex(own.Shades.Accent), own.AccentEnd is { } oe ? ThemeManager.Hex(oe) : null, Loc.T("The theme's own"), a.Accent == null && a.AccentEnd == null,
-            () => Commit(Current with { Accent = null, AccentEnd = null }));
-        accents.Children.Add(ownSwatch);
-        accents.Children.Add(Divider());
-        foreach (var (name, hex) in ThemeManager.Accents)
+        string start = a.Accent ?? ThemeManager.Hex(look.Shades.Accent);
+        string? end = !string.IsNullOrEmpty(a.AccentEnd) ? a.AccentEnd : look.Version.AccentEnd is { } e0 ? ThemeManager.Hex(e0) : null;
+        string mode = a.Accent == null && a.AccentEnd == null ? "own" : end != null ? "gradient" : "plain";
+        AddRow(rows, Loc.T("Accent"), Segmented([("own", Loc.T("The theme's own")), ("plain", Loc.T("Plain")), ("gradient", Loc.T("Gradient"))], mode, k => Commit(k switch
         {
-            string chosen = hex;
-            accents.Children.Add(Swatch(hex, Loc.T(name), string.Equals(a.Accent, hex, StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(a.AccentEnd), () => Commit(Current with { Accent = chosen, AccentEnd = "" })));
-        }
-        accents.Children.Add(Divider());
-        foreach (var (name, start, end) in ThemeManager.GradientAccents)
+            "own" => Current with { Accent = null, AccentEnd = null },
+            "plain" => Current with { Accent = start, AccentEnd = "" },
+            _ => Current with { Accent = start, AccentEnd = end ?? ThemeManager.Hex(ThemeManager.Mix(ThemeManager.Hex(start), Colors.White, 0.4)) },
+        })));
+
+        var accents = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        if (mode == "gradient")
         {
-            string s0 = start, e0 = end;
-            accents.Children.Add(GradientSwatch(start, end, Loc.T(name), string.Equals(a.Accent, start, StringComparison.OrdinalIgnoreCase) && string.Equals(a.AccentEnd, end, StringComparison.OrdinalIgnoreCase),
-                () => Commit(Current with { Accent = s0, AccentEnd = e0 })));
+            // The two ends, each opening the picker, then ready-made gradients.
+            Border from = null!, to = null!;
+            from = Swatch(start, Loc.T("Start colour"), true, () => OpenPicker(from, start,
+                hex => Commit(Current with { Accent = hex, AccentEnd = end }), hex => ThemeManager.Preview(Current with { Accent = hex, AccentEnd = end })));
+            to = Swatch(end!, Loc.T("End colour"), true, () => OpenPicker(to, end!,
+                hex => Commit(Current with { Accent = start, AccentEnd = hex }), hex => ThemeManager.Preview(Current with { Accent = start, AccentEnd = hex })));
+            accents.Children.Add(from);
+            var bar = new Border { Width = 70, Height = 10, CornerRadius = new CornerRadius(5), Margin = new Thickness(6, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center,
+                Background = ThemeBackdrop.Linear([ThemeManager.Hex(start), ThemeManager.Hex(end!)], 90) };
+            accents.Children.Add(bar);
+            accents.Children.Add(to);
+            accents.Children.Add(Divider());
+            foreach (var (name, s0, e1) in ThemeManager.GradientAccents)
+            {
+                string gs = s0, ge = e1;
+                accents.Children.Add(GradientSwatch(s0, e1, Loc.T(name), false, () => Commit(Current with { Accent = gs, AccentEnd = ge })));
+            }
         }
-        accents.Children.Add(Divider());
-        string currentAccent = ThemeManager.Hex(look.Shades.Accent);
-        bool custom = a.Accent != null && !ThemeManager.Accents.Any(x => x.Hex.Equals(a.Accent, StringComparison.OrdinalIgnoreCase)) && !ThemeManager.GradientAccents.Any(x => x.Start.Equals(a.Accent, StringComparison.OrdinalIgnoreCase));
-        Border pick = null!;
-        pick = Swatch(custom ? a.Accent! : "#FFFFFF", Loc.T("Pick any colour"), custom, () => OpenPicker(pick, a.Accent ?? currentAccent,
-            hex => Commit(Current with { Accent = hex, AccentEnd = "" }), hex => ThemeManager.Preview(Current with { Accent = hex, AccentEnd = "" })));
-        if (!custom && pick.Child is Ellipse spectrum) { spectrum.Fill = Spectrum(); spectrum.StrokeThickness = 0; }
-        accents.Children.Add(pick);
-        AddRow(rows, Loc.T("Accent"), accents);
+        else
+        {
+            foreach (var (name, hex) in ThemeManager.Accents)
+            {
+                string chosen = hex;
+                accents.Children.Add(Swatch(hex, Loc.T(name), mode == "plain" && string.Equals(a.Accent, hex, StringComparison.OrdinalIgnoreCase), () => Commit(Current with { Accent = chosen, AccentEnd = "" })));
+            }
+            accents.Children.Add(Divider());
+            bool custom = mode == "plain" && !ThemeManager.Accents.Any(x => x.Hex.Equals(a.Accent, StringComparison.OrdinalIgnoreCase));
+            Border pick = null!;
+            pick = Swatch(custom ? start : "#FFFFFF", Loc.T("Pick any colour"), custom, () => OpenPicker(pick, start,
+                hex => Commit(Current with { Accent = hex, AccentEnd = "" }), hex => ThemeManager.Preview(Current with { Accent = hex, AccentEnd = "" })));
+            if (!custom && pick.Child is Ellipse spectrum) { spectrum.Fill = Spectrum(); spectrum.StrokeThickness = 0; }
+            accents.Children.Add(pick);
+        }
+        AddRow(rows, Loc.T("Accent colours"), accents);
 
         AddRow(rows, Loc.T("Grain"), SliderRow(0, 0.08, look.Style.Grain, Loc.T("None"), Loc.T("Strong"), v => Current with { Grain = Math.Round(v, 3) }));
         AddRow(rows, Loc.T("Home banner"), Segmented([("", Loc.T("None")), ("home-hero.jpg", Loc.T("Celadon")), ("hero-summer.jpg", Loc.T("Summer")), ("hero-autumn.jpg", Loc.T("Autumn pond")), ("gradient", Loc.T("Gradient"))],
@@ -502,6 +523,115 @@ public partial class SettingsWindow
         AddRow(rows, Loc.T("Width"), width);
     }
 
+    // ---- Tab: action panel ------------------------------------------------------------------------------------
+
+    private void PanelTab(Grid rows)
+    {
+        var st = ThemeManager.CurrentStyle;
+        var tiles = new WrapPanel();
+        foreach (var (id, name) in new[] { ("theme", "Like the theme"), ("liquid", "Liquid glass"), ("soft", "Soft glass"), ("smoked", "Smoked glass") })
+        {
+            string chosen = id;
+            tiles.Children.Add(OptionTile(PanelSample(id, 116, 76), Loc.T(name), st.Panel == id, () => Commit(Current with { Panel = chosen })));
+        }
+        AddRow(rows, Loc.T("Panel look"), tiles);
+
+        var preview = new StackPanel { Orientation = Orientation.Horizontal };
+        preview.Children.Add(PanelSample(st.Panel, 300, 196));
+        var side = new StackPanel { Width = 250, Margin = new Thickness(20, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+        var note = new TextBlock { TextWrapping = TextWrapping.Wrap, FontSize = 12.5, Margin = new Thickness(0, 0, 0, 12),
+            Text = st.Panel == "theme" ? Loc.T("The panel uses this theme's background, cards and colours.") : Loc.T("Glass shows the live desktop behind it, so open the panel to see it while you adjust.") };
+        note.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
+        side.Children.Add(note);
+        var open = new Button { Style = (Style)FindResource("SecondaryButton"), Content = Loc.T("Open the panel"), HorizontalAlignment = HorizontalAlignment.Left, Padding = new Thickness(14, 6, 14, 7) };
+        open.Click += (_, _) => _host.PreviewPanelGlass();
+        side.Children.Add(open);
+        preview.Children.Add(side);
+        AddRow(rows, Loc.T("Preview"), preview);
+        if (st.Panel != "theme") AddRow(rows, Loc.T("Glass"), GlassControls());
+    }
+
+    /// <summary>A picture of the action panel in a look, over the current theme's background.</summary>
+    private static FrameworkElement PanelSample(string material, double w, double h)
+    {
+        var look = ThemeManager.CurrentLook;
+        var s = look.Shades;
+        double r = material == "theme" ? Math.Min(look.Style.Radius + 4, 22) * w / 300 : 18 * w / 300;
+        var root = new Grid { Width = w, Height = h, Clip = new RectangleGeometry(new Rect(0, 0, w, h), Math.Max(r, 6), Math.Max(r, 6)) };
+        foreach (var layer in ThemeBackdrop.Layers(look, mini: true)) root.Children.Add(layer);
+        bool themed = material == "theme";
+        if (!themed)
+        {
+            // Glass over the desktop: a wash and a bright rim.
+            root.Children.Add(new Border { Background = new SolidColorBrush(material switch
+            {
+                "smoked" => Color.FromArgb(0xB0, 0x16, 0x1A, 0x20), "soft" => Color.FromArgb(0x70, 0x30, 0x38, 0x42), _ => Color.FromArgb(0x50, 0x20, 0x28, 0x30),
+            }) });
+            root.Children.Add(new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(Math.Max(r, 6)), BorderBrush = new LinearGradientBrush(Color.FromArgb(160, 255, 255, 255), Color.FromArgb(30, 255, 255, 255), 90) });
+        }
+        else
+            root.Children.Add(new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(Math.Max(r, 6)), BorderBrush = new SolidColorBrush(ThemeManager.Mix(s.Page, s.Ink, 0.12)) });
+        double scale = w / 300;
+        Brush ink = themed ? new SolidColorBrush(s.Ink) : Brushes.White;
+        var stack = new StackPanel { Margin = new Thickness(14 * scale, 12 * scale, 14 * scale, 0) };
+        stack.Children.Add(new TextBlock { Text = "Chao Desk", FontSize = Math.Max(7, 13 * scale), FontWeight = FontWeights.SemiBold, Foreground = ink, Margin = new Thickness(0, 0, 0, 8 * scale) });
+        var grid = new System.Windows.Controls.Primitives.UniformGrid { Columns = 3 };
+        byte alpha = look.Style.Card switch { "glass" => (byte)(255 * look.Style.CardOpacity), "outline" => (byte)0, _ => (byte)255 };
+        string[] glyphs = ["\uE77F", "\uE722", "\uE8C1", "\uE721", "\uE8A5", "\uE713"];
+        foreach (var glyph in glyphs)
+        {
+            var tile = new Border { Height = 56 * scale, Margin = new Thickness(3 * scale), CornerRadius = new CornerRadius(Math.Max(2, 10 * scale)), BorderThickness = new Thickness(1),
+                Background = themed ? new SolidColorBrush(Color.FromArgb(alpha, s.Card.R, s.Card.G, s.Card.B)) : Brushes.Transparent,
+                BorderBrush = themed ? new SolidColorBrush(ThemeManager.Mix(s.Page, s.Ink, look.Style.Card == "outline" ? 0.2 : 0.1)) : new SolidColorBrush(Color.FromArgb(70, 255, 255, 255)),
+                Child = new TextBlock { Text = glyph, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = Math.Max(7, 18 * scale), Foreground = ink, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } };
+            grid.Children.Add(tile);
+        }
+        stack.Children.Add(grid);
+        root.Children.Add(stack);
+        return root;
+    }
+
+    /// <summary>The glass controls: refraction mode and the optical sliders, saved as they move.</summary>
+    private FrameworkElement GlassControls()
+    {
+        var options = _host.PanelGlass ?? new Panel.GlassOptions();
+        var content = new StackPanel { Width = 460 };
+        var modes = new[] { "standard", "polar", "prominent", "shader" };
+        var mode = Segmented([("standard", Loc.T("Standard")), ("polar", Loc.T("Polar")), ("prominent", Loc.T("Strong")), ("shader", Loc.T("Curved"))], options.Mode,
+            m => { options = options with { Mode = m }; _host.PanelGlass = options; });
+        mode.Margin = new Thickness(0, 0, 0, 10);
+        content.Children.Add(mode);
+        var resetters = new List<Action<Panel.GlassOptions>>();
+        void GlassSlider(string title, double min, double max, double step, Func<Panel.GlassOptions, double> get, Func<Panel.GlassOptions, double, Panel.GlassOptions> set, string format)
+        {
+            var row = new Grid { Margin = new Thickness(0, 3, 0, 3) };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(110) });
+            row.ColumnDefinitions.Add(new ColumnDefinition());
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(48) });
+            var label = new TextBlock { Text = title, VerticalAlignment = VerticalAlignment.Center, FontSize = 12.5 };
+            label.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
+            row.Children.Add(label);
+            var slider = new Slider { Minimum = min, Maximum = max, TickFrequency = step, SmallChange = step, LargeChange = step * 5, IsSnapToTickEnabled = true, Value = get(options), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 12, 0) };
+            System.Windows.Automation.AutomationProperties.SetName(slider, title);
+            var value = new TextBlock { Text = get(options).ToString(format), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right, FontSize = 12.5 };
+            Grid.SetColumn(slider, 1); Grid.SetColumn(value, 2);
+            row.Children.Add(slider); row.Children.Add(value);
+            content.Children.Add(row);
+            slider.ValueChanged += (_, _) => { options = set(options, slider.Value); value.Text = slider.Value.ToString(format); _host.PanelGlass = options; };
+            resetters.Add(o => slider.Value = get(o));
+        }
+        GlassSlider(Loc.T("Refraction"), 0, 200, 1, o => o.Displacement, (o, v) => o with { Displacement = v }, "0");
+        GlassSlider(Loc.T("Frosting"), 0, 1, .01, o => o.Blur, (o, v) => o with { Blur = v }, "0.00");
+        GlassSlider(Loc.T("Saturation"), 100, 300, 5, o => o.Saturation, (o, v) => o with { Saturation = v }, "0");
+        GlassSlider(Loc.T("Dispersion"), 0, 20, .5, o => o.Aberration, (o, v) => o with { Aberration = v }, "0.0");
+        GlassSlider(Loc.T("Corner radius"), 0, 48, 1, o => o.Radius, (o, v) => o with { Radius = v }, "0");
+        GlassSlider(Loc.T("Highlight"), 0, 2, .05, o => o.Highlight, (o, v) => o with { Highlight = v }, "0.00");
+        var reset = new Button { Style = (Style)FindResource("SecondaryButton"), Content = Loc.T("Reset glass"), HorizontalAlignment = HorizontalAlignment.Left, Padding = new Thickness(14, 5, 14, 6), Margin = new Thickness(0, 8, 0, 0) };
+        reset.Click += (_, _) => { options = new(); foreach (var apply in resetters) apply(options); _host.PanelGlass = options; BuildAppearance(); };
+        content.Children.Add(reset);
+        return content;
+    }
+
     // ---- Tab: density and motion ----------------------------------------------------------------------------
 
     private void DensityTab(Grid rows)
@@ -596,12 +726,7 @@ public partial class SettingsWindow
         return gap;
     }
 
-    private static Brush GradientOf(string[] colours, double angle)
-    {
-        var brush = new LinearGradientBrush { StartPoint = new Point(0, 0.5), EndPoint = new Point(1, 0.5) };
-        for (int i = 0; i < colours.Length; i++) brush.GradientStops.Add(new GradientStop(ThemeManager.Hex(colours[i]), colours.Length == 1 ? 0 : (double)i / (colours.Length - 1)));
-        return brush;
-    }
+    private static Brush GradientOf(string[] colours, double angle) => ThemeBackdrop.Linear(colours.Select(ThemeManager.Hex).ToList(), angle);
 
     private static Brush Spectrum()
     {
@@ -729,7 +854,7 @@ public partial class SettingsWindow
         var layer = new Grid { IsHitTestVisible = false, ClipToBounds = true };
         if (key.Length > 0)
         {
-            foreach (var part in BackdropLayers(look, mini: false)) layer.Children.Add(part);
+            foreach (var part in ThemeBackdrop.Layers(look, mini: false)) layer.Children.Add(part);
             layer.CacheMode = new BitmapCache(); // drawn once, not on every frame
         }
         Grid.SetColumnSpan(layer, 2);
@@ -744,68 +869,4 @@ public partial class SettingsWindow
         layer.BeginAnimation(OpacityProperty, fade);
     }
 
-    private static readonly Point[] GlowSpots = [new(0.08, 0.12), new(0.92, 0.06), new(0.88, 0.95), new(0.1, 0.92)];
-
-    /// <summary>The page colour or gradient, the blurred picture under a veil, the glows and the grain.</summary>
-    private static IEnumerable<UIElement> BackdropLayers(ThemeManager.Look look, bool mini)
-    {
-        var s = look.Shades;
-        var b = look.Version.Backdrop;
-        bool dark = look.Dark;
-        if (b.Kind == "linear" && b.Colours.Length > 0)
-        {
-            double rad = b.Angle * Math.PI / 180;
-            var brush = new LinearGradientBrush { StartPoint = new Point(0.5 - Math.Cos(rad) / 2, 0.5 - Math.Sin(rad) / 2), EndPoint = new Point(0.5 + Math.Cos(rad) / 2, 0.5 + Math.Sin(rad) / 2) };
-            for (int i = 0; i < b.Colours.Length; i++) brush.GradientStops.Add(new GradientStop(ThemeManager.Hex(b.Colours[i]), b.Colours.Length == 1 ? 0 : (double)i / (b.Colours.Length - 1)));
-            yield return new Rectangle { Fill = brush };
-        }
-        else yield return new Rectangle { Fill = new SolidColorBrush(s.Page) };
-        if (look.Picture != null && b.Kind is "wallpaper" or "image")
-        {
-            var image = new Image { Source = look.Picture, Stretch = Stretch.UniformToFill, Margin = new Thickness(mini ? -6 : -60),
-                Effect = new BlurEffect { Radius = mini ? 4 : 40, RenderingBias = RenderingBias.Performance } };
-            RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
-            yield return image;
-            yield return new Rectangle { Fill = new SolidColorBrush(Color.FromArgb(dark ? (byte)0xA8 : (byte)0x8C, s.Page.R, s.Page.G, s.Page.B)) };
-        }
-        if (b.Kind == "glow")
-            for (int i = 0; i < b.Colours.Length; i++)
-            {
-                var c = ThemeManager.Hex(b.Colours[i]);
-                var spot = GlowSpots[i % GlowSpots.Length];
-                double op = dark ? 0.55 : 0.95;
-                var brush = new RadialGradientBrush { Center = spot, GradientOrigin = spot, RadiusX = 0.6, RadiusY = 0.7 };
-                brush.GradientStops.Add(new GradientStop(Color.FromArgb((byte)(255 * op), c.R, c.G, c.B), 0));
-                brush.GradientStops.Add(new GradientStop(Color.FromArgb((byte)(140 * op), c.R, c.G, c.B), 0.45));
-                brush.GradientStops.Add(new GradientStop(Color.FromArgb(0, c.R, c.G, c.B), 1));
-                yield return new Rectangle { Fill = brush };
-            }
-        if (look.Style.Grain > 0 && !mini)
-            yield return new Rectangle
-            {
-                Fill = new ImageBrush(Noise(dark)) { TileMode = TileMode.Tile, Viewport = new Rect(0, 0, 128, 128), ViewportUnits = BrushMappingMode.Absolute },
-                Opacity = Math.Min(1, look.Style.Grain * 0.8),
-            };
-    }
-
-    private static BitmapSource? _noiseDark, _noiseLight;
-
-    /// <summary>A tile of random specks (white on dark themes, black on light ones) for a paper-like grain.</summary>
-    private static BitmapSource Noise(bool dark)
-    {
-        ref var cached = ref dark ? ref _noiseDark : ref _noiseLight;
-        if (cached != null) return cached;
-        const int size = 128;
-        var pixels = new byte[size * size * 4];
-        var random = new Random(7);
-        byte v = dark ? (byte)255 : (byte)0;
-        for (int i = 0; i < pixels.Length; i += 4)
-        {
-            pixels[i] = pixels[i + 1] = pixels[i + 2] = v;
-            pixels[i + 3] = (byte)random.Next(256);
-        }
-        var bitmap = BitmapSource.Create(size, size, 96, 96, PixelFormats.Bgra32, null, pixels, size * 4);
-        bitmap.Freeze();
-        return cached = bitmap;
-    }
 }

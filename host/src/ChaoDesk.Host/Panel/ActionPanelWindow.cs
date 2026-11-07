@@ -51,6 +51,10 @@ public sealed partial class ActionPanelWindow : Window
     internal int GlassUploadDeferrals => _uploadDeferrals;
     private double _uploadMilliseconds;
     private bool UsesLens => _material() is "liquid" or "soft" or "smoked" && !SystemParameters.HighContrast;
+    /// <summary>The theme's own look: its background, cards, colours and title font instead of glass.</summary>
+    private bool Themed => _material() == "theme" && !SystemParameters.HighContrast;
+    private readonly Border _themeFace = new() { IsHitTestVisible = false, BorderThickness = new Thickness(1), Visibility = Visibility.Collapsed };
+    private static readonly string[] GlassKeys = ["InkBrush", "MutedBrush", "AccentBrush", "ControlBrush", "AccentSoftBrush", "HoverBrush"];
     internal int GlassFrames => _glass?.Delivered ?? 0;
     internal long GlassUploads => _uploadCount;
     internal Rect CapturedBounds => _captureBounds;
@@ -107,6 +111,7 @@ public sealed partial class ActionPanelWindow : Window
         var frame = new Border { Child = _surface };
         _root.Children.Add(frame);
         _glassScene = new GlassScene(_lens);
+        _surface.Children.Add(_themeFace);
         _surface.Children.Add(_glassScene);
         _surface.Children.Add(_tint);
         var shine = _shine = new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(24), IsHitTestVisible = false,
@@ -158,6 +163,29 @@ public sealed partial class ActionPanelWindow : Window
 
     private void ApplyColors()
     {
+        if (Themed)
+        {
+            // Take the app's theme brushes (no window-scoped glass palette) and paint the theme's background.
+            foreach (string name in GlassKeys) Resources.Remove(name);
+            foreach (var key in new object[] { SystemColors.HighlightBrushKey, SystemColors.HighlightTextBrushKey, SystemColors.WindowBrushKey, SystemColors.WindowTextBrushKey }) Resources.Remove(key);
+            _ink = (Brush)FindResource("InkBrush"); _muted = (Brush)FindResource("MutedBrush"); _hover = (Brush)FindResource("HoverBrush");
+            SetResourceReference(ForegroundProperty, "InkBrush");
+            _status.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
+            _heading.SetResourceReference(TextBlock.ForegroundProperty, "InkBrush");
+            _heading.SetResourceReference(TextBlock.FontFamilyProperty, "TitleFont");
+            _heading.Effect = null; _status.Effect = null;
+            _tint.Background = null;
+            var face = new Grid();
+            foreach (var layer in Settings.ThemeBackdrop.Layers(ThemeManager.CurrentLook, mini: false)) face.Children.Add(layer);
+            _themeFace.Child = face;
+            _themeFace.SetResourceReference(Border.BorderBrushProperty, "LineBrush");
+            _themeFace.Visibility = Visibility.Visible;
+            Refresh();
+            return;
+        }
+        _themeFace.Visibility = Visibility.Collapsed; _themeFace.Child = null;
+        _heading.ClearValue(TextBlock.FontFamilyProperty);
+        _heading.Effect = GlyphContrast(); _status.Effect = GlyphContrast();
         _ink = Brushes.White; _muted = Brushes.White;
         _hover = new SolidColorBrush(Color.FromArgb(18,255,255,255));
         // Scope the glass palette to this window, including in-panel editors.
@@ -208,10 +236,12 @@ public sealed partial class ActionPanelWindow : Window
         _glassScene.Configure(new Size(w, h), dpi, blurRadius, options.Displacement, options.Aberration);
         _glass?.SetOverscan((int)Math.Ceiling(96+Math.Max(dpi.DpiScaleX,dpi.DpiScaleY)*(options.Displacement*.5*(1+options.Aberration*.1)+blurRadius)));
         // One outer silhouette. Shader opacity and native DWM rounding must not cut it again.
-        double radius = Math.Min(options.Radius, Math.Min(w,h)/2);
+        double wanted = Themed ? Math.Min(ThemeManager.CurrentStyle.Radius + 6, 30) : options.Radius;
+        double radius = Math.Min(wanted, Math.Min(w,h)/2);
         _surface.Clip = new RectangleGeometry(new Rect(_surface.RenderSize), radius, radius);
-        _shine.CornerRadius = new CornerRadius(options.Radius);
-        _shine.Visibility = UsesLens ? Visibility.Collapsed : Visibility.Visible;
+        _shine.CornerRadius = new CornerRadius(wanted);
+        _themeFace.CornerRadius = new CornerRadius(radius);
+        _shine.Visibility = UsesLens || Themed ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private IntPtr GlassWindowMessage(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -375,6 +405,15 @@ public sealed partial class ActionPanelWindow : Window
 
     private void StyleAction(Button button)
     {
+        if (Themed)
+        {
+            // Action tiles are the theme's cards: its surface, border and (for raised cards) shadow.
+            button.SetResourceReference(BackgroundProperty, "SurfaceBrush");
+            button.SetResourceReference(BorderBrushProperty, "CardBorderBrush");
+            button.BorderThickness = new Thickness(1);
+            button.Tag = TryFindResource("CardEffect");
+            return;
+        }
         if (SystemParameters.HighContrast) return;
         button.Background = Brushes.Transparent;
         button.BorderThickness = new Thickness(0);
@@ -579,7 +618,7 @@ public sealed partial class ActionPanelWindow : Window
         var effect = new GlassGlyphEffect();
         effect.Freeze(); return effect;
     }
-    private static GlassGlyphEffect GlyphContrast() => GlyphUnderlay;
+    private System.Windows.Media.Effects.Effect? GlyphContrast() => Themed ? null : GlyphUnderlay;
     private TextBlock Label(string text) => new() { Text = text, FontSize = 12, Foreground = _muted, Effect = GlyphContrast(), TextWrapping = TextWrapping.Wrap };
     private new ShapePath Icon(string data, double size)
     {

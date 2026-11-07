@@ -58,6 +58,10 @@ public class UiSnapshots
                     var narrow = new Clips.ClipboardWindow(history, new Clips.ClipboardMonitor(messages, history), false);
                     typeof(Clips.ClipboardWindow).GetMethod("Refresh", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(narrow, [false]);
                     Render(narrow, Path.Combine(folder, $"clipboard-narrow-{language}.png"));
+                    // The action panel in the theme's own look (glass needs the live desktop, so it is not rendered here).
+                    var themedPanel = new ChaoDesk.Host.Panel.ActionPanelWindow(history, new Clips.ClipboardMonitor(messages, history), () => true, _ => { },
+                        (_, _) => Task.FromException<ChaoDesk.Host.Translate.Translation>(new NotSupportedException()), () => "theme");
+                    Render(themedPanel, Path.Combine(folder, $"panel-theme-{language}.png"));
                     Render(SampleLauncher(), Path.Combine(folder, $"launcher-{language}.png"));
                     var picture = BitmapSource.Create(400, 200, 96, 96, PixelFormats.Bgra32, null, new byte[400 * 200 * 4], 400 * 4);
                     var ocr = new Ocr.OcrWindow(picture, "auto", false, false, _ => { }, (_, _, _) => { }) { Width = 1000, Height = 560 };
@@ -84,7 +88,7 @@ public class UiSnapshots
                 foreach (var mode in new[] { "light", "dark" })
                 {
                     ThemeManager.Apply(mode);
-                    for (int tab = 0; tab < 5; tab++)
+                    for (int tab = 0; tab < 6; tab++)
                     {
                         var page = new SettingsWindow(FakeHost.Create()) { Width = 1280, Height = 1300 };
                         tabField.SetValue(page, tab);
@@ -270,7 +274,6 @@ public class UiSnapshots
             if (name == "get_ThemeAdjust") return ThemeManager.CurrentAdjust;
             if (name == "set_ThemeAdjust") { ThemeManager.SetAdjust((ThemeManager.Adjust)args![0]!); return null; }
             if (name == "get_PanelMouseMode") return _settings.PanelMouseTrigger;
-            if (name == "get_PanelMaterial") return _settings.PanelMaterial;
             if (name == "get_Language") return Loc.Language;
             if (name == "get_TranslateEngine" || name == "get_TranslateTarget") return "auto";
             if (name == "get_OcrLanguage") return "auto";

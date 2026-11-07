@@ -39,10 +39,13 @@ public static class ThemeManager
     /// The style of a theme. Card: solid, glass, outline, raised. Font: sans, serif, geo, mono (titles). Body:
     /// system, title (same as titles), mono. Sidebar: same, contrast, float, icons. Nav: pill, bar, filled, line.
     /// Icons: line, accent, none. Density: compact, default, roomy. Hero: "" (none), a picture or "gradient".
+    /// Panel: how the action panel looks — "theme" (the theme's own background and cards) or a glass (liquid, soft, smoked).
     /// </summary>
     public sealed record Style(double Radius = 18, string Card = "solid", double CardOpacity = 0.7, string Font = "sans", string Body = "system",
         double Zoom = 1, string Sidebar = "same", string Nav = "pill", string Icons = "line", double SidebarWidth = 236, string Density = "default",
-        double Grain = 0, string Hero = "", bool Motion = true);
+        double Grain = 0, string Hero = "", bool Motion = true, string Panel = "theme");
+
+    public static readonly string[] PanelLooks = ["theme", "liquid", "soft", "smoked"];
 
     /// <summary>A theme: id (stored), name (shown), tags for the filter (gradient, dark, minimal, distinctive), versions, style.</summary>
     public sealed record Palette(string Id, string Name, string[] Tags, Version Light, Version Dark, Style Style, bool FollowsWallpaper = false);
@@ -54,7 +57,7 @@ public static class ThemeManager
     public sealed record Adjust(string? Accent = null, string? AccentEnd = null, Backdrop? Light = null, Backdrop? Dark = null,
         double? Radius = null, string? Card = null, double? CardOpacity = null, string? Font = null, string? Body = null, double? Zoom = null,
         string? Sidebar = null, string? Nav = null, string? Icons = null, double? SidebarWidth = null, string? Density = null, double? Grain = null,
-        string? Hero = null, bool? Motion = null)
+        string? Hero = null, bool? Motion = null, string? Panel = null)
     {
         public static readonly Adjust None = new();
 
@@ -70,6 +73,7 @@ public static class ThemeManager
             if (Density != null || Motion != null) yield return "Density";
             if (Grain != null) yield return "Grain";
             if (Hero != null) yield return "Banner";
+            if (Panel != null) yield return "Action panel";
         }
 
         public bool IsEmpty => !Changes().Any();
@@ -83,7 +87,7 @@ public static class ThemeManager
     private static Shades S(string page, string card, string ink, string accent) => new(Hex(page), Hex(card), Hex(ink), Hex(accent));
     private static Backdrop Solid => new("solid", []);
     private static Backdrop Glow(params string[] c) => new("glow", c);
-    private static Backdrop Linear(double angle, params string[] c) => new("linear", c, angle);
+    private static Backdrop Linear(double angle, params string[] c) => new("linear", c, angle); // CSS-style angle, see ThemeBackdrop
     private static Color? C(string hex) => Hex(hex);
 
     public static readonly Palette[] Palettes =
@@ -95,10 +99,10 @@ public static class ThemeManager
         new("aurora", "Aurora", ["gradient", "dark"],
             new(Glow("#BFEBDF", "#CCDDF8", "#D3F1E7"), S("#F3F7F8", "#FFFFFF", "#17201F", "#11977F"), C("#2F7FE0")),
             new(Glow("#1FA88E", "#2F6FD0", "#14806F"), S("#0D1315", "#172022", "#E9F1EF", "#5EE0C0"), C("#4FA3F7")),
-            new(Radius: 22, Card: "glass", CardOpacity: 0.55, Sidebar: "float", Grain: 0.03)),
+            new(Radius: 22, Card: "glass", CardOpacity: 0.55, Sidebar: "float", Grain: 0.03, Panel: "liquid")),
         new("peach", "Peach", ["gradient"],
-            new(Linear(140, "#FFE9DE", "#FCE3EC", "#E9E6FB"), S("#FCEBEB", "#FFFFFF", "#2B1F26", "#F07A5E"), C("#E5577E")),
-            new(Linear(140, "#2A1A22", "#1E1726", "#16182A"), S("#1F1824", "#2A2030", "#F3E8EE", "#FF9E80"), C("#F06A8E")),
+            new(Linear(135, "#FFE9DE", "#FCE3EC", "#E9E6FB"), S("#FCEBEB", "#FFFFFF", "#2B1F26", "#F07A5E"), C("#E5577E")),
+            new(Linear(135, "#2A1A22", "#1E1726", "#16182A"), S("#1F1824", "#2A2030", "#F3E8EE", "#FF9E80"), C("#F06A8E")),
             new(Radius: 26, Card: "glass", CardOpacity: 0.62, Font: "geo", Body: "title", Nav: "filled", Grain: 0.02)),
         new("sunset", "Sunset", ["gradient", "distinctive"],
             new(Solid, S("#F4F2EF", "#FFFFFF", "#1E1B1A", "#F2774F"), C("#E8566F"), C("#1C1A22")),
@@ -113,13 +117,13 @@ public static class ThemeManager
             new(Glow("#22344A", "#5A3B3A"), S("#121820", "#1A212B", "#ECEFF3", "#F2B36B"), C("#E07A5F")),
             new(Radius: 16, Card: "glass", CardOpacity: 0.7, Grain: 0.04)),
         new("lagoon", "Lagoon", ["gradient"],
-            new(Linear(150, "#D8F3F1", "#DDE9FB", "#F1F5FA"), S("#E8F2F6", "#FFFFFF", "#14222B", "#0F9D8F"), C("#3B82F6")),
+            new(Linear(135, "#D8F3F1", "#DDE9FB", "#F1F5FA"), S("#E8F2F6", "#FFFFFF", "#14222B", "#0F9D8F"), C("#3B82F6")),
             new(Glow("#0F766E", "#1E3A8A"), S("#0B1418", "#132027", "#E2F1F3", "#2DD4BF"), C("#60A5FA")),
-            new(Radius: 16, Card: "glass", CardOpacity: 0.7, Nav: "bar")),
+            new(Radius: 16, Card: "glass", CardOpacity: 0.7, Nav: "bar", Panel: "soft")),
         new("neon", "Neon", ["gradient", "dark", "distinctive"],
             new(Glow("#FFD1E8", "#CFF5FF"), S("#FBF8FF", "#FFFFFF", "#1C1530", "#E0267F"), C("#0091C2")),
             new(Glow("#C2186B", "#007FA3"), S("#0E0B17", "#18142A", "#F1ECFF", "#FF3D9A"), C("#00D1FF")),
-            new(Radius: 12, Card: "glass", CardOpacity: 0.5, Font: "geo", Nav: "filled", Grain: 0.03)),
+            new(Radius: 12, Card: "glass", CardOpacity: 0.5, Font: "geo", Nav: "filled", Grain: 0.03, Panel: "smoked")),
         new("editorial", "Editorial", ["minimal", "distinctive"],
             new(Solid, S("#FBFAF7", "#FBFAF7", "#16130F", "#B23A2A")),
             new(Solid, S("#151311", "#1B1916", "#EFEAE2", "#E0705F")),
@@ -318,7 +322,7 @@ public static class ThemeManager
             Radius = a.Radius ?? s.Radius, Card = a.Card ?? s.Card, CardOpacity = a.CardOpacity ?? s.CardOpacity, Font = a.Font ?? s.Font,
             Body = a.Body ?? s.Body, Zoom = a.Zoom ?? s.Zoom, Sidebar = a.Sidebar ?? s.Sidebar, Nav = a.Nav ?? s.Nav, Icons = a.Icons ?? s.Icons,
             SidebarWidth = a.SidebarWidth ?? s.SidebarWidth, Density = a.Density ?? s.Density, Grain = a.Grain ?? s.Grain, Hero = a.Hero ?? s.Hero,
-            Motion = a.Motion ?? s.Motion,
+            Motion = a.Motion ?? s.Motion, Panel = a.Panel is { } panel && PanelLooks.Contains(panel) ? panel : s.Panel,
         };
         var v = dark ? p.Dark : p.Light;
         ImageSource? picture = null;

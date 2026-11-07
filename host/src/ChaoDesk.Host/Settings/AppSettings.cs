@@ -57,7 +57,6 @@ public sealed class AppSettings
     public const string DefaultPanelHotkey = "Ctrl+Space";
     public string PanelHotkey { get; set; } = DefaultPanelHotkey;
     public string PanelMouseTrigger { get; set; } = "middle";
-    public string PanelMaterial { get; set; } = "liquid";
     public Panel.GlassOptions PanelGlass { get; set; } = new();
     public List<Panel.PanelItem> PanelItems { get; set; } = Panel.PanelLayout.Defaults();
     public const string DefaultClipboardHotkey = "Shift+`";
@@ -227,7 +226,6 @@ public sealed class AppSettings
         LauncherHotkey = NormalizeHotkey(LauncherHotkey, DefaultLauncherHotkey);
         PanelHotkey = NormalizeHotkey(PanelHotkey, DefaultPanelHotkey);
         if (!Input.PanelMouseTrigger.Modes.Contains(PanelMouseTrigger)) PanelMouseTrigger = "middle";
-        if (PanelMaterial is not ("liquid" or "soft" or "smoked")) PanelMaterial = "liquid";
         PanelGlass = (PanelGlass ?? new()).Normalize();
         PanelItems = Panel.PanelLayout.Normalize(PanelItems);
         ClipboardHotkey = NormalizeHotkey(ClipboardHotkey, DefaultClipboardHotkey);

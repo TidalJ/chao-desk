@@ -22,6 +22,16 @@ public class PanelSettingsTests
     }
 
     [Fact]
+    public void ThePanelLookFollowsTheThemeAndCanBeAdjusted()
+    {
+        var celadon = Settings.ThemeManager.FindPalette("celadon");
+        Assert.Equal("theme", Settings.ThemeManager.Resolve(celadon, Settings.ThemeManager.Adjust.None, false).Style.Panel);
+        Assert.Equal("liquid", Settings.ThemeManager.Resolve(Settings.ThemeManager.FindPalette("aurora"), Settings.ThemeManager.Adjust.None, false).Style.Panel);
+        Assert.Equal("smoked", Settings.ThemeManager.Resolve(celadon, new Settings.ThemeManager.Adjust(Panel: "smoked"), false).Style.Panel);
+        Assert.Equal("theme", Settings.ThemeManager.Resolve(celadon, new Settings.ThemeManager.Adjust(Panel: "frosted"), false).Style.Panel);
+    }
+
+    [Fact]
     public void PanelHotkeyHasDefaultAndCanBeDisabled()
     {
         Assert.Equal("Ctrl+Space", new AppSettings().Normalize().PanelHotkey);
@@ -29,10 +39,6 @@ public class PanelSettingsTests
         Assert.Equal("Ctrl+Space", new AppSettings { PanelHotkey = "invalid+invalid" }.Normalize().PanelHotkey);
         Assert.Equal("Ctrl+Alt+P", new AppSettings { PanelHotkey = "Ctrl+Alt+P" }.Normalize().PanelHotkey);
         Assert.Equal("middle", new AppSettings { PanelMouseTrigger = "unknown" }.Normalize().PanelMouseTrigger);
-        Assert.Equal("liquid", new AppSettings { PanelMaterial = "unknown" }.Normalize().PanelMaterial);
-        Assert.Equal("liquid", new AppSettings { PanelMaterial = "solid" }.Normalize().PanelMaterial);
-        Assert.Equal("liquid", new AppSettings { PanelMaterial = "frosted" }.Normalize().PanelMaterial);
-        Assert.Equal("smoked", new AppSettings { PanelMaterial = "smoked" }.Normalize().PanelMaterial);
         Assert.Equal("none", new AppSettings { PanelMouseTrigger = "none" }.Normalize().PanelMouseTrigger);
     }
 }

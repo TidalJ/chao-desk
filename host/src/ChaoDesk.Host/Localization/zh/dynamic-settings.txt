@@ -79,3 +79,9 @@ Filled	实心
 Underline	下划线
 Cards	卡片
 Banner	横幅
+
+# Action panel looks (reached through variables)
+Like the theme	跟随主题
+Liquid glass	液态玻璃
+Soft glass	拟态玻璃
+Smoked glass	烟晶玻璃

@@ -350,21 +350,30 @@
             <DockPanel x:Name="PanelPage" Margin="40,46,30,22" Visibility="Collapsed">
                 <StackPanel DockPanel.Dock="Top" Margin="0,0,8,16">
                     <TextBlock Style="{StaticResource PageTitle}" Text="Action panel" />
-                    <TextBlock Style="{StaticResource PageSubtitle}" Text="Manage actions, appearance and how the panel opens." />
+                    <TextBlock Style="{StaticResource PageSubtitle}" Text="Its actions and how it opens. Its look follows the theme in Appearance." />
                 </StackPanel>
-                <TabControl x:Name="PanelSettingsTabs" Background="Transparent" BorderThickness="0">
-                    <TabItem Header="Manage actions" Style="{StaticResource PanelTab}">
-                        <ContentControl x:Name="PanelActionsHost" Margin="0,12,0,0" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
-                    </TabItem>
-                    <TabItem Header="Appearance and shortcuts" Style="{StaticResource PanelTab}">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,12,0,0">
-                            <StackPanel Margin="0,0,8,12">
-                                <Border Style="{StaticResource Card}"><StackPanel x:Name="PanelHotkeysPanel" /></Border>
-                                <Border Style="{StaticResource Card}" Margin="0,12,0,0"><StackPanel x:Name="PanelOptionsPanel" /></Border>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="0,0,8,12">
+                        <!-- How it opens: the hotkey and the mouse gesture -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <StackPanel x:Name="PanelHotkeysPanel" />
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <StackPanel x:Name="PanelOptionsPanel" />
+                                <Separator Style="{StaticResource RowSeparator}" />
+                                <Grid Style="{StaticResource SettingRow}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="Look" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="Glass or the theme's own look, with a preview." />
+                                    </StackPanel>
+                                    <Button Style="{StaticResource SecondaryButton}" Content="Change in Appearance" Click="OnPanelLook" />
+                                </Grid>
                             </StackPanel>
-                        </ScrollViewer>
-                    </TabItem>
-                </TabControl>
+                        </Border>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="Actions" />
+                        <ContentControl x:Name="PanelActionsHost" HorizontalContentAlignment="Stretch" />
+                    </StackPanel>
+                </ScrollViewer>
             </DockPanel>
 
             <!-- Screenshot -->

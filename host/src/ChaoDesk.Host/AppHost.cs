@@ -863,7 +863,7 @@ public sealed class AppHost : ISettingsHost, IDisposable
                     case "lock": NativeMethods.LockWorkStation(); break;
                     case "settings": ShowSettings(); break;
                 }
-            }, TranslateAsync, () => _settings.PanelMaterial,
+            }, TranslateAsync, () => ThemeManager.CurrentStyle.Panel,
             PanelActions, () => _settings.PanelGlass, () => ShowSettings("panel"));
         if (created) _actionPanel.IsVisibleChanged += (_, _) => {
             Interlocked.Increment(ref _panelVisibilityGeneration);
@@ -1083,11 +1083,6 @@ public sealed class AppHost : ISettingsHost, IDisposable
         set { if (!PanelMouseTrigger.Modes.Contains(value)) return; _settings.PanelMouseTrigger = value; ApplyHotkeys(); ScheduleSave(); }
     }
 
-    public string PanelMaterial
-    {
-        get => _settings.PanelMaterial;
-        set { if (value is not ("liquid" or "soft" or "smoked")) return; _settings.PanelMaterial = value; _actionPanel?.RefreshMaterial(); ScheduleSave(); }
-    }
 
     public Panel.GlassOptions PanelGlass
     {

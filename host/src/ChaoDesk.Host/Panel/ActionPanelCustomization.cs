@@ -55,8 +55,10 @@ public sealed partial class ActionPanelWindow
         var content = new StackPanel { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Stretch };
         var icon = Icon(iconData, 23); icon.HorizontalAlignment = HorizontalAlignment.Center;
         icon.Margin = new Thickness(0, 0, 0, 8); content.Children.Add(icon);
-        content.Children.Add(new TextBlock { Text = name, FontSize = 13, FontWeight = FontWeights.Normal, Foreground = Brushes.White, Effect = GlyphContrast(),
-            TextAlignment = TextAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap });
+        var label = new TextBlock { Text = name, FontSize = 13, FontWeight = FontWeights.Normal, Effect = GlyphContrast(),
+            TextAlignment = TextAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap };
+        label.SetResourceReference(TextBlock.ForegroundProperty, "InkBrush"); // white in glass, the theme's ink otherwise
+        content.Children.Add(label);
         var button = Button(content, run);
         button.MinHeight = 76; button.Height = 76; button.Margin = new Thickness(3); button.Padding = new Thickness(4, 9, 4, 9);
         button.HorizontalContentAlignment = HorizontalAlignment.Stretch;

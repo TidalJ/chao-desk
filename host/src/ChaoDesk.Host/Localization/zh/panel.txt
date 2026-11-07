@@ -8,8 +8,6 @@ Mouse back button	鼠标后退侧键
 Mouse forward button	鼠标前进侧键
 Ctrl + right click	Ctrl + 鼠标右键
 Alt + left click	Alt + 鼠标左键
-Panel material	面板材质
-Soft glass	拟态玻璃
 Copied	已复制
 Open the action panel for clipboard, screenshots, text recognition and translation.	打开快捷面板，使用剪贴板、截图、文字识别和翻译。
 Text to translate	要翻译的文字
@@ -19,8 +17,6 @@ Could not copy. Try again.	复制失败，请重试。
 Enter text to translate.	请输入要翻译的文字。
 Open this panel over a browser to reopen its last closed tab.	请在浏览器窗口中打开面板，以恢复最近关闭的标签页。
 
-Liquid glass	液态玻璃
-Liquid and soft glass refract the live background locally. No images are saved; this panel is excluded from screenshots.	液态与拟态模式在本机折射实时背景，不保存画面；为避免重影，面板不显示在截图中。
 Launch app	启动软件
 Open file	打开文件
 Open folder	打开文件夹
@@ -30,6 +26,10 @@ Folder path	文件夹路径
 App or shortcut path	软件或快捷方式路径
 Choose an existing file.	请选择现有文件。
 Choose an existing folder.	请选择现有文件夹。
-Manage actions, appearance and how the panel opens.	管理操作、外观和面板打开方式。
-Manage actions	操作管理
-Appearance and shortcuts	外观与快捷键
+
+# Action panel page
+Its actions and how it opens. Its look follows the theme in Appearance.	面板的操作和打开方式。外观跟随「外观」里的主题。
+Look	外观
+Glass or the theme's own look, with a preview.	玻璃或主题自带的样式，可预览。
+Change in Appearance	去外观里修改
+Actions	操作
