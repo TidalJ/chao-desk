@@ -96,6 +96,14 @@ chinesesimplified.DeleteUserData=同时删除 Chao Desk 的设置、剪贴板历
 Name: "startup"; Description: "{cm:TaskStartup}"; GroupDescription: "{cm:GroupStartup}"; Check: not IsUpgrade
 Name: "desktopicon"; Description: "{cm:TaskDesktopIcon}"; GroupDescription: "{cm:GroupShortcuts}"; Flags: unchecked
 
+[InstallDelete]
+; Older versions shipped the OCR engine for every platform (Android, iOS, Linux, macOS…) and debug symbols;
+; an upgrade removes them, and the folders the package owns are replaced whole.
+Type: filesandordirs; Name: "{app}\runtimes"
+Type: filesandordirs; Name: "{app}\wallpapers"
+Type: filesandordirs; Name: "{app}\ocr"
+Type: files; Name: "{app}\*.pdb"
+
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 

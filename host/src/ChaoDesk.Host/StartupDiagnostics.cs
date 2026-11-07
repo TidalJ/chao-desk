@@ -32,11 +32,39 @@ internal static class StartupDiagnostics
                 $"StartupApproved={(approval?.GetValue("ChaoDesk") is byte[] bytes ? Convert.ToHexString(bytes) : "<missing>")}");
         }
         catch (Exception ex) { Record($"Environment diagnostics failed: {ex}"); }
+        Prune();
         _watchdog = new Timer(_ =>
         {
             Record($"Process alive; stage={Volatile.Read(ref _stage)}");
             if (Interlocked.Increment(ref _samples) >= 10) _watchdog?.Dispose();
         }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    private const int KeptStartupLogs = 20;
+
+    /// <summary>
+    /// Every launch writes its own startup log; keep the newest few. Logs from before the app was renamed
+    /// (lotuspond-*.log) are no longer written or read, so they go too.
+    /// </summary>
+    private static void Prune()
+    {
+        foreach (string folder in new[] { AppPaths.Logs, Path.Combine(Path.GetTempPath(), "ChaoDesk-startup") })
+        {
+            try
+            {
+                if (!Directory.Exists(folder)) continue;
+                var old = new DirectoryInfo(folder).GetFiles("startup-*.log")
+                    .Where(f => f.Name != FileName)
+                    .OrderByDescending(f => f.LastWriteTimeUtc)
+                    .Skip(KeptStartupLogs - 1)
+                    .Concat(new DirectoryInfo(folder).GetFiles("lotuspond-*.log"));
+                foreach (var file in old)
+                {
+                    try { file.Delete(); } catch { /* in use or gone: leave it */ }
+                }
+            }
+            catch { /* diagnostics must not affect startup */ }
+        }
     }
 
     internal static void Stage(string stage)

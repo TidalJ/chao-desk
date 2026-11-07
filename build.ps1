@@ -260,9 +260,15 @@ if ($Deploy) {
         Get-Process ChaoDesk -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $exe } | Stop-Process -Force -ErrorAction SilentlyContinue
         Start-Sleep -Milliseconds 500
     }
-    # Replace the wallpapers wholesale; copy the app files over (the uninstaller's files stay).
-    $wp = Join-Path $installDir 'wallpapers'
-    if (Test-Path $wp) { Remove-Item -Recurse -Force $wp }
+    # Replace the folders the package owns wholesale, drop app files an older version left behind (libraries,
+    # debug symbols), then copy the app over. The uninstaller's files and anything else in the folder stay.
+    foreach ($dir in 'wallpapers', 'ocr', 'runtimes') {
+        $p = Join-Path $installDir $dir
+        if (Test-Path $p) { Remove-Item -Recurse -Force $p }
+    }
+    Get-ChildItem $installDir -File |
+        Where-Object { $_.Extension -in '.dll', '.pdb', '.xml', '.json' -and -not (Test-Path (Join-Path $appOut $_.Name)) } |
+        Remove-Item -Force
     Copy-Item -Recurse -Force (Join-Path $appOut '*') $installDir
     # Explorer caches exe icons (taskbar, Task Manager, shortcuts); refresh it so a new app icon shows.
     & "$env:windir\System32\ie4uinit.exe" -show
