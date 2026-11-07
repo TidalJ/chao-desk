@@ -32,7 +32,7 @@ public sealed class HotkeyManager : IDisposable
             return 0;
         }
         _registered[id] = (key, action);
-        Log.Information("Registered hotkey {Hotkey}", key);
+        Log.Debug("Registered hotkey {Hotkey}", key);
         return id;
     }
 

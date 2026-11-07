@@ -116,7 +116,7 @@ public sealed class FatScanner : IDisposable
                 using var w = _index.BeginWrite();
                 w.EndVolume(volume); // always: a volume left "loading" would block compaction
             }
-            Log.Information("Drive {Drive} ({Count:N0} entries) scanned in {Ms} ms", $"{letter}:", count, Environment.TickCount64 - started);
+            Log.Debug("Drive {Drive} ({Count:N0} entries) scanned in {Ms} ms", $"{letter}:", count, Environment.TickCount64 - started);
             Watch(letter, drive, root);
             _changed();
         }

@@ -95,7 +95,7 @@ public sealed class PausePolicy : IDisposable
         if (!SameAs(result, _last))
         {
             _last = result;
-            foreach (var kv in result) Log.Information("Pause state {Monitor}: {Reasons}", kv.Key, kv.Value);
+            foreach (var kv in result) Log.Debug("Pause state {Monitor}: {Reasons}", kv.Key, kv.Value);
             Changed?.Invoke(result);
         }
     }
@@ -147,8 +147,8 @@ public sealed class PausePolicy : IDisposable
         if (msg == WM_WTSSESSION_CHANGE)
         {
             int code = wParam.ToInt32();
-            if (code == WTS_SESSION_LOCK) { _sessionLocked = true; Log.Information("Session locked"); Evaluate(); }
-            else if (code == WTS_SESSION_UNLOCK) { _sessionLocked = false; Log.Information("Session unlocked"); Evaluate(); }
+            if (code == WTS_SESSION_LOCK) { _sessionLocked = true; Log.Debug("Session locked"); Evaluate(); }
+            else if (code == WTS_SESSION_UNLOCK) { _sessionLocked = false; Log.Debug("Session unlocked"); Evaluate(); }
         }
         else if (msg == WM_POWERBROADCAST && wParam.ToInt32() == PBT_POWERSETTINGCHANGE && lParam != IntPtr.Zero)
         {
@@ -156,7 +156,7 @@ public sealed class PausePolicy : IDisposable
             if (setting.PowerSetting == GUID_CONSOLE_DISPLAY_STATE)
             {
                 _displayOff = setting.Data == 0; // 0 = off, 1 = on, 2 = dimmed
-                Log.Information("Display state: {State}", setting.Data switch { 0 => "off", 1 => "on", _ => "dimmed" });
+                Log.Debug("Display state: {State}", setting.Data switch { 0 => "off", 1 => "on", _ => "dimmed" });
             }
             else if (setting.PowerSetting == GUID_POWER_SAVING_STATUS)
             {

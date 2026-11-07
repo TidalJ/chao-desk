@@ -39,7 +39,7 @@ public sealed class PanelMouseHook : IDisposable
         _threadId = GetCurrentThreadId();
         _hook = SetWindowsHookEx(WH_MOUSE_LL, _callback, GetModuleHandle(null), 0);
         if (_hook == IntPtr.Zero) { Log.Error("Panel mouse hook failed: {Error}", Marshal.GetLastWin32Error()); return; }
-        Log.Information("Panel mouse trigger active: {Mode}", _mode);
+        Log.Debug("Panel mouse trigger active: {Mode}", _mode);
         try
         {
             while (!_disposed && GetMessage(out MSG msg, IntPtr.Zero, 0, 0) > 0) { TranslateMessage(ref msg); DispatchMessage(ref msg); }

@@ -102,7 +102,7 @@ public sealed class AppCatalog : IDisposable
                 var started = Stopwatch.StartNew();
                 Enumerate();
                 _refreshedAt = Environment.TickCount64;
-                Log.Information("App catalog: {Count} apps in {Ms} ms", _apps.Count, started.ElapsedMilliseconds);
+                Log.Debug("App catalog: {Count} apps in {Ms} ms", _apps.Count, started.ElapsedMilliseconds);
                 SaveCache();
             }
             catch (Exception ex) { Log.Warning(ex, "Could not list the Start menu apps"); }
@@ -203,7 +203,7 @@ public sealed class AppCatalog : IDisposable
             _apps = list;
             _savedSignature = Signature();
             Changed?.Invoke();
-            Log.Information("App catalog: {Count} apps from the cache", list.Count);
+            Log.Debug("App catalog: {Count} apps from the cache", list.Count);
         }
         catch (Exception ex) when (ex is IOException or EndOfStreamException or NotSupportedException or FileFormatException or UnauthorizedAccessException)
         {

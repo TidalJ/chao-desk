@@ -70,11 +70,11 @@ public partial class App : Application
             await _host.StartAsync();
             if (panelRequested) _host.TogglePanel();
             StartupDiagnostics.Stage("Startup complete");
-            _ = Dispatcher.BeginInvoke(() => StartupDiagnostics.Record("UI dispatcher responsive after startup"));
+            _ = Dispatcher.BeginInvoke(() => { StartupDiagnostics.Record("UI dispatcher responsive after startup"); StartupDiagnostics.Succeeded(); });
         }
         catch (Exception ex)
         {
-            StartupDiagnostics.Record($"Startup failed: {ex}");
+            StartupDiagnostics.Failure($"Startup failed: {ex}");
             Log.Fatal(ex, "Failed to start");
             MessageBox.Show(Localization.Loc.F("Chao Desk could not start:\n\n{0}", ex.Message), "Chao Desk",
                 MessageBoxButton.OK, MessageBoxImage.Error);
@@ -108,6 +108,7 @@ public partial class App : Application
         catch (Exception ex)
         {
             Log.Fatal(ex, "{Mode} failed", mode);
+            StartupDiagnostics.Failure($"{mode} failed: {ex}");
             code = 1;
         }
         Log.CloseAndFlush();
@@ -170,7 +171,7 @@ public partial class App : Application
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        StartupDiagnostics.Record($"Dispatcher exception: {e.Exception}");
+        StartupDiagnostics.Failure($"Dispatcher exception: {e.Exception}");
         Log.Error(e.Exception, "Unhandled UI exception");
         e.Handled = true; // keep the wallpaper alive; the error is logged
     }

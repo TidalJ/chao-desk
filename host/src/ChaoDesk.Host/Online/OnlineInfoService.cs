@@ -109,7 +109,7 @@ public sealed partial class OnlineInfoService : IDisposable
                 var rates = ParseBocRates(html);
                 if (rates.Count > 0) { Rates = rates; RatesFetchedAt = DateTime.Now; changed = true; LastError = null; }
                 else LastError = Loc.T("Bank of China page had no rates (layout changed?)");
-                Log.Information("Exchange rates: {Count} currencies", rates.Count);
+                Log.Debug("Exchange rates: {Count} currencies", rates.Count);
             }
             catch (Exception ex) { LastError = Loc.F("Exchange rates: {0}", ex.Message); Log.Warning("Exchange rates fetch failed: {Message}", ex.Message); }
         }
@@ -150,7 +150,7 @@ public sealed partial class OnlineInfoService : IDisposable
             if (report == null) { WeatherError = "Weather service returned no data"; return false; }
             Weather = report;
             WeatherError = null;
-            Log.Information("Weather for {City}: {Temp} °C, code {Code}", p.Name, report.Now.Temp, report.Now.Code);
+            Log.Debug("Weather for {City}: {Temp} °C, code {Code}", p.Name, report.Now.Temp, report.Now.Code);
             return true;
         }
         catch (Exception ex) { WeatherError = $"Weather: {ex.Message}"; Log.Warning("Weather fetch failed: {Message}", ex.Message); return false; }

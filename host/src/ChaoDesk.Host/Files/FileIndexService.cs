@@ -211,7 +211,7 @@ public sealed class FileIndexService : IDisposable
             Index.Save(SnapshotPath, () => { foreach (var kv in _checkpoints) checkpoints[kv.Key] = kv.Value; });
             IndexCheckpoints.Write(IndexCheckpoints.DefaultPath, checkpoints);
             _savedChanges = changes;
-            Log.Information("Saved the file index in {Ms} ms", started.ElapsedMilliseconds);
+            Log.Debug("Saved the file index in {Ms} ms", started.ElapsedMilliseconds);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

@@ -116,7 +116,7 @@ public sealed class UpdateService : IDisposable
                 return;
             }
             Latest = release;
-            Log.Information("Update check: running {Current}, latest {Latest}", Current, release.Version);
+            Log.Debug("Update check: running {Current}, latest {Latest}", Current, release.Version);
             Set(release.Version > Current ? UpdateState.Available : UpdateState.UpToDate);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
