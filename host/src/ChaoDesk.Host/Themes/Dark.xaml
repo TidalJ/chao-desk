@@ -1,26 +1,79 @@
-<!-- Dark theme: the same keys as Light.xaml — neutral graphite (not black) with the indigo accent lifted for contrast. -->
+<!-- Dark theme, "celadon at night": the same keys as Light.xaml — a deep green-grey page (not black), slightly lighter
+     cards and the celadon accent lifted for contrast. -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <SolidColorBrush x:Key="PaperBrush" Color="#232428" />
-    <SolidColorBrush x:Key="SidebarBrush" Color="#1E1F22" />
-    <SolidColorBrush x:Key="CardBrush" Color="#2B2C30" />
-    <SolidColorBrush x:Key="InkBrush" Color="#E8E9EC" />
-    <SolidColorBrush x:Key="MutedBrush" Color="#9A9EA7" />
-    <SolidColorBrush x:Key="LineBrush" Color="#38393E" />
-    <SolidColorBrush x:Key="AccentBrush" Color="#8E98F2" />
-    <SolidColorBrush x:Key="AccentHoverBrush" Color="#A3ABF5" />
-    <SolidColorBrush x:Key="AccentSoftBrush" Color="#30334F" />
-    <SolidColorBrush x:Key="DangerBrush" Color="#EF8A80" />
-    <SolidColorBrush x:Key="NavSelectedBrush" Color="#2E2F34" />
-    <SolidColorBrush x:Key="HoverBrush" Color="#14FFFFFF" />
-    <SolidColorBrush x:Key="ControlBrush" Color="#2E2F33" />
-    <SolidColorBrush x:Key="ControlHoverBrush" Color="#36373C" />
-    <SolidColorBrush x:Key="ControlPressedBrush" Color="#3E3F45" />
-    <SolidColorBrush x:Key="ToggleTrackBrush" Color="#2E2F33" />
-    <SolidColorBrush x:Key="ToggleBorderBrush" Color="#8A8F98" />
-    <SolidColorBrush x:Key="ToggleThumbBrush" Color="#C2C5CC" />
-    <SolidColorBrush x:Key="FooterBrush" Color="#1F2023" />
-    <SolidColorBrush x:Key="PlaceholderBrush" Color="#6E727A" />
-    <SolidColorBrush x:Key="TileBrush" Color="#35363B" />
-    <SolidColorBrush x:Key="PreviewBrush" Color="#26272B" />
+    <SolidColorBrush x:Key="PaperBrush" Color="#161B19" />
+    <SolidColorBrush x:Key="PageBrush" Color="#161B19" />
+    <SolidColorBrush x:Key="CardBorderBrush" Color="#2A3330" />
+    <SolidColorBrush x:Key="PopupBrush" Color="#1E2522" />
+    <SolidColorBrush x:Key="SidebarBrush" Color="#161B19" />
+    <SolidColorBrush x:Key="CardBrush" Color="#1E2522" />
+    <SolidColorBrush x:Key="InkBrush" Color="#E6EDEA" />
+    <SolidColorBrush x:Key="MutedBrush" Color="#9BA8A3" />
+    <SolidColorBrush x:Key="LineBrush" Color="#2A3330" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#74B8A6" />
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#88C6B5" />
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="#21312C" />
+    <SolidColorBrush x:Key="AccentFaintBrush" Color="#2B4039" />
+    <SolidColorBrush x:Key="OnAccentBrush" Color="#0F1513" />
+    <SolidColorBrush x:Key="DangerBrush" Color="#EE8C86" />
+    <SolidColorBrush x:Key="SuccessBrush" Color="#5BC08E" />
+    <SolidColorBrush x:Key="NavSelectedBrush" Color="#1E2522" />
+    <SolidColorBrush x:Key="HoverBrush" Color="#12FFFFFF" />
+    <SolidColorBrush x:Key="ControlBrush" Color="#1E2522" />
+    <SolidColorBrush x:Key="ControlHoverBrush" Color="#26302C" />
+    <SolidColorBrush x:Key="ControlPressedBrush" Color="#2D3834" />
+    <SolidColorBrush x:Key="ToggleTrackBrush" Color="#36423E" />
+    <SolidColorBrush x:Key="ToggleBorderBrush" Color="#36423E" />
+    <SolidColorBrush x:Key="ToggleThumbBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="FooterBrush" Color="#1E2522" />
+    <SolidColorBrush x:Key="PlaceholderBrush" Color="#6F7C77" />
+    <SolidColorBrush x:Key="TileBrush" Color="#26302C" />
+    <SolidColorBrush x:Key="KeycapBrush" Color="#26302C" />
+    <SolidColorBrush x:Key="PreviewBrush" Color="#1E2522" />
+    <SolidColorBrush x:Key="SelectedRowBrush" Color="#2A322F" />
+    <SolidColorBrush x:Key="ChartRestBrush" Color="#2F3A36" />
+    <LinearGradientBrush x:Key="HeroVeilBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#F2161B19" Offset="0" />
+        <GradientStop Color="#D9161B19" Offset="0.34" />
+        <GradientStop Color="#66161B19" Offset="0.62" />
+        <GradientStop Color="#1A161B19" Offset="0.85" />
+    </LinearGradientBrush>
+    <Color x:Key="ShadowColor">#000000</Color>
+    <sys:Double xmlns:sys="clr-namespace:System;assembly=mscorlib" x:Key="ShadowOpacity">0.25</sys:Double>
+    <!-- Settings cards: the card colour, see-through in themes with a backdrop. -->
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#1E2522" />
+    <!-- Filled accents (main buttons, switches, the chart's today bar): a gradient in some themes. -->
+    <LinearGradientBrush x:Key="AccentFillBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#74B8A6" Offset="0" />
+        <GradientStop Color="#74B8A6" Offset="1" />
+    </LinearGradientBrush>
+    <FontFamily x:Key="TitleFont">Segoe UI Variable Display, Segoe UI, Microsoft YaHei UI</FontFamily>
+    <!-- Shapes, density, fonts and the sidebar: ThemeManager writes all of these per theme; these are fallbacks. -->
+    <CornerRadius x:Key="CardRadius">18</CornerRadius>
+    <CornerRadius x:Key="ControlRadius">18</CornerRadius>
+    <CornerRadius x:Key="ToggleRadius">12</CornerRadius>
+    <CornerRadius x:Key="ThumbRadius">9</CornerRadius>
+    <CornerRadius x:Key="SmallRadius">10</CornerRadius>
+    <Thickness x:Key="RowMargin">0,12</Thickness>
+    <Thickness x:Key="CardPadding">22,6</Thickness>
+    <Thickness x:Key="NavItemPadding">12,8</Thickness>
+    <FontFamily x:Key="GreetingFont">Georgia, Noto Serif SC, Source Han Serif SC, SimSun</FontFamily>
+    <FontFamily x:Key="BodyFont">Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI</FontFamily>
+    <SolidColorBrush x:Key="SideLineBrush" Color="#2A322F" />
+    <SolidColorBrush x:Key="SideInkBrush" Color="#E6EDEA" />
+    <SolidColorBrush x:Key="SideMutedBrush" Color="#93A09B" />
+    <SolidColorBrush x:Key="SideHoverBrush" Color="#0A000000" />
+    <SolidColorBrush x:Key="NavGlyphBrush" Color="#93A09B" />
+    <SolidColorBrush x:Key="NavOnBorderBrush" Color="#2A322F" />
+    <SolidColorBrush x:Key="NavOnInkBrush" Color="#E6EDEA" />
+    <SolidColorBrush x:Key="NavOnGlyphBrush" Color="#74B8A6" />
+    <SolidColorBrush x:Key="NavBarBrush" Color="#00000000" />
+    <SolidColorBrush x:Key="NavLineBrush" Color="#00000000" />
+    <LinearGradientBrush x:Key="NavOnBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#1E2522" Offset="0" />
+        <GradientStop Color="#1E2522" Offset="1" />
+    </LinearGradientBrush>
+    <Visibility x:Key="NavGlyphVisibility">Visible</Visibility>
+    <Visibility x:Key="NavLabelVisibility">Visible</Visibility>
 </ResourceDictionary>

@@ -83,6 +83,9 @@ public sealed class AppHost : ISettingsHost, IDisposable
         _devTools = devTools;
         _requestExit = requestExit;
         _settings = AppSettings.Load(AppPaths.SettingsFile);
+        ThemeManager.WallpaperSource = WallpaperPicture;
+        ThemeManager.Configure(_settings.ThemeAdjustments, _settings.UserThemes);
+        ThemeManager.SetTheme(_settings.Palette);
         ThemeManager.Apply(_settings.Theme);
         Loc.Apply(_settings.Language);
         // The Run key is the source of truth for "Start with Windows": the installer's option writes it,
@@ -191,6 +194,7 @@ public sealed class AppHost : ISettingsHost, IDisposable
     {
         StartupDiagnostics.Stage("Resolving wallpaper package");
         _current = ResolvePackage(_settings.CurrentWallpaperId);
+        ThemeManager.WallpaperChanged();
         StartupDiagnostics.Stage($"Starting desktop layer; wanted={WantsDesktopLayer}; package={_current?.Id ?? "<missing>"}");
         if (WantsDesktopLayer) await StartWallpaperAsync();
         else OnManagerStateChanged();
@@ -341,6 +345,7 @@ public sealed class AppHost : ISettingsHost, IDisposable
         if (pkg == null) return;
         _current = pkg;
         _settings.CurrentWallpaperId = pkg.Id;
+        ThemeManager.WallpaperChanged();
         ScheduleSave();
         Log.Information("Applying wallpaper {Id}", pkg.Id);
         if (!_widgetsOnly) await _manager.SetContentAsync(ContentFor(pkg));
@@ -357,6 +362,7 @@ public sealed class AppHost : ISettingsHost, IDisposable
         if (def == null) return;
         _settings.PropertiesFor(_current.Id)[key] = def.Coerce(value);
         BroadcastProperties();
+        if (key == "scene") ThemeManager.WallpaperChanged();
         ScheduleSave();
     }
 
@@ -365,6 +371,7 @@ public sealed class AppHost : ISettingsHost, IDisposable
         if (_current == null) return;
         _settings.PropertiesFor(_current.Id).Clear();
         BroadcastProperties();
+        ThemeManager.WallpaperChanged();
         ScheduleSave();
     }
 
@@ -391,6 +398,7 @@ public sealed class AppHost : ISettingsHost, IDisposable
             if (WantsDesktopLayer) _ = StartWallpaperAsync();
             _tray.SetWallpaperEnabled(_settings.WallpaperEnabled);
             OnManagerStateChanged();
+            ThemeManager.WallpaperChanged();
         }
         ApplyMouseInteraction();
         _online.Enabled = _settings.OnlineInfo && _wallpaperRunning;
@@ -1132,6 +1140,7 @@ public sealed class AppHost : ISettingsHost, IDisposable
             case "clipboard": _messageWindow.Dispatch(ToggleClipboard); break;
             case "screenshot": AfterLauncherCloses(() => _screenshots.StartRegion()); break;
             case "ocr": AfterLauncherCloses(() => _screenshots.StartRegion(CaptureMode.Ocr)); break;
+            case "pin": AfterLauncherCloses(() => _screenshots.StartPin()); break;
         }
     }
 
@@ -1183,6 +1192,61 @@ public sealed class AppHost : ISettingsHost, IDisposable
     public Task<Translation> TranslateAsync(string text, CancellationToken token = default) =>
         Translator.TranslateAsync(text, _settings.TranslateTarget, _settings.TranslateEngine, token);
 
+    public ThemeManager.Adjust ThemeAdjust
+    {
+        get => ThemeManager.CurrentAdjust;
+        set { ThemeManager.SetAdjust(value ?? ThemeManager.Adjust.None); SaveThemes(); }
+    }
+
+    public void SaveTheme()
+    {
+        ThemeManager.SaveAsUserTheme(Loc.F("My theme {0}", ThemeManager.Users.Count + 1));
+        SaveThemes();
+    }
+
+    public void DeleteTheme(string id)
+    {
+        ThemeManager.DeleteUserTheme(id);
+        SaveThemes();
+    }
+
+    /// <summary>Keeps the theme in use, the adjustments and the user's themes in the settings.</summary>
+    private void SaveThemes()
+    {
+        _settings.Palette = ThemeManager.CurrentId;
+        _settings.ThemeAdjustments = ThemeManager.Adjustments.ToDictionary(a => a.Key, a => a.Value);
+        _settings.UserThemes = ThemeManager.Users.ToList();
+        ScheduleSave();
+    }
+
+    /// <summary>
+    /// The picture the "From wallpaper" theme takes its colours from: the pond scene while the pond is on, otherwise
+    /// the Windows wallpaper.
+    /// </summary>
+    private string? WallpaperPicture()
+    {
+        if (_settings.WallpaperEnabled && _current != null && File.Exists(Path.Combine(_current.Folder, "assets", "celadon.jpg")))
+        {
+            string scene = (CurrentProperties()["scene"]?.ToString() ?? "").ToLowerInvariant();
+            string name = scene switch { "wisteria garden" => "wisteria", "summer lotus" => "summer", "autumn leaves" => "autumn", _ => "celadon" };
+            string picture = Path.Combine(_current.Folder, "assets", name + ".jpg");
+            if (File.Exists(picture)) return picture;
+        }
+        return Desktop.DesktopBackground.Current().ImagePath;
+    }
+
+    public string Palette
+    {
+        get => _settings.Palette;
+        set
+        {
+            if (value == _settings.Palette || !ThemeManager.Exists(value)) return;
+            _settings.Palette = value;
+            ThemeManager.SetTheme(value);
+            ScheduleSave();
+        }
+    }
+
     public string Theme
     {
         get => _settings.Theme;
@@ -1192,12 +1256,6 @@ public sealed class AppHost : ISettingsHost, IDisposable
             _settings.Theme = value;
             ScheduleSave();
             ThemeManager.Apply(value);
-            // Parts of the settings window are built in code with the old colours: reopen it on the same page.
-            if (_settingsWindow != null)
-            {
-                _settingsWindow.Close();
-                _messageWindow.Dispatch(() => ShowSettings("general"));
-            }
         }
     }
 
@@ -1323,6 +1381,39 @@ public sealed class AppHost : ISettingsHost, IDisposable
     }
 
     public int ClipboardCount => _clipHistory.Items.Count;
+
+    public HomeStats HomeStats
+    {
+        get
+        {
+            var today = DateTime.Today;
+            var perDay = new int[7];
+            foreach (var clip in _clipHistory.Items)
+            {
+                int days = (today - clip.Created.Date).Days;
+                if (days is >= 0 and < 7) perDay[6 - days]++;
+            }
+            var recent = _clipHistory.Items.OrderByDescending(c => c.Created).Take(4).ToList();
+
+            int shots = 0;
+            try
+            {
+                string folder = ScreenshotFolder;
+                var since = today.AddDays(-6);
+                if (Directory.Exists(folder))
+                    shots = new DirectoryInfo(folder).EnumerateFiles().Count(f => f.LastWriteTime >= since &&
+                        f.Extension.ToLowerInvariant() is ".png" or ".jpg" or ".jpeg");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+
+            var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var app in _catalog.Apps) names.TryAdd(app.Id, app.Name);
+            var top = _stats.Items.Where(kv => names.ContainsKey(kv.Key) && kv.Value.Count > 0)
+                .OrderByDescending(kv => kv.Value.Count).Take(3).Select(kv => (names[kv.Key], kv.Value.Count)).ToList();
+
+            return new HomeStats(perDay, recent, shots, _settings.FileSearchEnabled ? _files.Index.Count : 0, top);
+        }
+    }
 
     public void ClearClipboardHistory()
     {

@@ -107,8 +107,8 @@ public sealed partial class PanelActionsEditor
         var save = Button(Loc.T("Save action"), "SavePanelAction", SaveAction);
         save.HorizontalAlignment = HorizontalAlignment.Right;
         save.Margin = new Thickness(0, 12, 8, 0);
-        save.SetResourceReference(BackgroundProperty, "AccentSoftBrush");
-        save.SetResourceReference(ForegroundProperty, "AccentBrush");
+        save.SetResourceReference(BackgroundProperty, "AccentBrush");
+        save.SetResourceReference(ForegroundProperty, "OnAccentBrush");
         _footer.Children.Add(save);
     }
 

@@ -18,3 +18,64 @@ CPU, memory, battery and free disk space, updated every few seconds.	CPU、内�
 Websites, folders and programs you open often, one click away.	常用的网站、文件夹和程序，一键打开。
 # OCR pack names and descriptions (Ocr/OcrPacks.cs) are in dynamic-app.txt.
 
+
+# Theme colour presets (ThemeManager.Accents)
+Celadon	青瓷
+Ink	墨黑
+Ocean	海蓝
+Indigo	靛青
+Rouge	胭脂
+Amber	琥珀
+
+# Theme palette names (ThemeManager.Palettes)
+Summer	夏荷
+Autumn pond	秋池
+
+# Background colour presets (ThemeManager.Backgrounds)
+White	纯白
+Light grey	浅灰
+Mist blue	雾蓝
+Mint	薄荷
+Graphite	石墨
+Deep sea	深海
+
+# Theme names (ThemeManager.Palettes) and the banner choice
+Morning mist	晨雾
+Aurora	极光
+Dusk	暮色
+Rice paper	宣纸
+From wallpaper	跟随壁纸
+None	不显示
+
+# Appearance: names reached through variables (themes, filters, tabs, options, adjusted parts)
+My theme	我的主题
+Peach	蜜桃
+Sunset	落日
+Lagoon	海湾
+Neon	霓虹
+Editorial	杂志
+Terminal	终端
+Nordic	北欧
+Minimal	简约
+Distinctive	个性
+Mine	我的
+Colours and background	颜色与背景
+Cards and corners	卡片与圆角
+Sidebar	侧栏
+Density and motion	密度与动效
+Frosted glass	毛玻璃
+Outline	线框
+Raised	浮起
+Sans	无衬线
+Serif	衬线
+Geometric	几何
+Like the page	与页面同色
+Dark panel	深色衬底
+Floating glass	悬浮玻璃
+Icons only	仅图标
+Pill	胶囊
+Side bar	左侧竖条
+Filled	实心
+Underline	下划线
+Cards	卡片
+Banner	横幅

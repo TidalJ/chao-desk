@@ -51,11 +51,4 @@ internal static class Motion
         scale.BeginAnimation(ScaleTransform.ScaleXProperty, to);
         scale.BeginAnimation(ScaleTransform.ScaleYProperty, to);
     }
-
-    /// <summary>A section appearing below the search box: its height grows from 0 (the window follows) while it fades in.</summary>
-    public static void Expand(FrameworkElement element, double height)
-    {
-        element.BeginAnimation(FrameworkElement.HeightProperty, new DoubleAnimation(0, height, TimeSpan.FromMilliseconds(170)) { EasingFunction = Ease });
-        element.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(170)));
-    }
 }

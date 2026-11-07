@@ -6,8 +6,8 @@ using System.Windows.Media;
 namespace ChaoDesk.Host.Launcher;
 
 /// <summary>
-/// A small squared icon button for the popups' search bars (preview pane, pin): muted when off, accent on a soft
-/// accent fill when on; it dips a little while pressed. Not focusable, so typing stays in the search box.
+/// A small squared icon button for the popups' search bars (preview pane, pin): muted when off, on an accent
+/// fill when on; it dips a little while pressed. Not focusable, so typing stays in the search box.
 /// </summary>
 internal static class IconButton
 {
@@ -23,7 +23,7 @@ internal static class IconButton
         };
         var button = new Border
         {
-            Width = 32, Height = 30, CornerRadius = new CornerRadius(4), Margin = new Thickness(4, 0, 0, 0),
+            Width = 32, Height = 30, CornerRadius = new CornerRadius(8), Margin = new Thickness(4, 0, 0, 0),
             Background = Brushes.Transparent, Cursor = Cursors.Hand, ToolTip = tooltip, Child = text,
         };
         Set(button, false);
@@ -40,11 +40,11 @@ internal static class IconButton
         if (button.Child is TextBlock text)
         {
             if (glyph != null) text.Text = glyph;
-            text.SetResourceReference(TextBlock.ForegroundProperty, on ? "AccentBrush" : "MutedBrush");
+            text.SetResourceReference(TextBlock.ForegroundProperty, on ? "OnAccentBrush" : "MutedBrush");
         }
         if (tooltip != null) button.ToolTip = tooltip;
-        // On: the accent (as the current filter tab's underline) on its soft tint, so it reads at a glance.
-        if (on) button.SetResourceReference(Border.BackgroundProperty, "AccentSoftBrush");
+        // On: filled with the accent, the glyph in the on-accent colour, so it reads at a glance.
+        if (on) button.SetResourceReference(Border.BackgroundProperty, "AccentBrush");
         else button.Background = Brushes.Transparent;
     }
 }

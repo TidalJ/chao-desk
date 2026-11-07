@@ -7,7 +7,6 @@ Warnings:	警告：
 Imported "{0}".	已导入“{0}”。
 Import failed: {0}	导入失败：{0}
 # --- Navigation ---
-Home	首页
 TOOLS	工具
 Launcher	启动器
 Clipboard	剪贴板
@@ -18,33 +17,13 @@ Tasks	待办
 APP	应用
 General	通用
 Diagnostics	诊断
-Version {0}	版本 {0}
 # --- Home ---
-Your tools at a glance.	所有工具，一目了然。
 no hotkey	无快捷键
-{0} · apps, files, sums and commands	{0} · 应用、文件、计算和命令
-{0} · paste anything you copied	{0} · 粘贴复制过的任何内容
-{0} capture · {1} whole screen · {2} pin	{0} 截图 · {1} 全屏 · {2} 贴图
-Scrolling capture {0} · saved to {1}	滚动截图 {0} · 保存到 {1}
-Capture	截图
-Text recognition	文字识别
-{0} · read the text in any part of the screen, offline	{0} · 离线识别屏幕任意区域的文字
-Languages: {0}	语言：{0}
-Recognise	识别
-Space in Explorer previews the selected file	在资源管理器中按 Space 预览选中的文件
-Pictures, PDF, video, music, text, Office documents, folders	图片、PDF、视频、音乐、文本、Office 文档、文件夹
-The lotus pond behind your icons	桌面图标后面的荷塘
-Off — your widgets stay on the Windows wallpaper	已关闭 — 小组件仍显示在 Windows 壁纸上
-Off — Windows' own wallpaper shows	已关闭 — 显示 Windows 自己的壁纸
 Appearance	外观
-Change it under General	在“通用”中更改
 # --- Launcher and file search ---
 One search box for apps, files, commands and quick sums.	一个搜索框，搜应用、文件、命令，还能快速计算。
 Hotkey	快捷键
-Click the box and press a new combination. Backspace turns it off.	点击输入框后按下新的组合键，按 Backspace 关闭。
-File search	文件搜索
 Search files and folders	搜索文件和文件夹
-Finds any file as you type, like Everything (NTFS drives).	像 Everything 一样边输入边找文件（NTFS 磁盘）。
 Set up…	配置…
 Set up again…	重新配置…
 Remove…	移除…
@@ -53,17 +32,11 @@ Creates a scheduled task that reads the drives with administrator rights. Window
 Deletes the scheduled task that reads the drives (asks for administrator permission).	删除读取磁盘的计划任务（需要管理员权限）。
 Turn file search off and remove its scheduled task? Windows asks for administrator permission.	要关闭文件搜索并移除其计划任务吗？Windows 会请求管理员权限。
 Include hidden and system files	包括隐藏文件和系统文件
-Also show hidden and system files, such as the Recycle Bin.	同时显示隐藏文件和系统文件，例如回收站。
 Skip bulky system folders	跳过庞大的系统文件夹
 Leaves out node_modules and C:\Windows\WinSxS, which saves a lot of memory.	不收录 node_modules 和 C:\Windows\WinSxS，可省下大量内存。
-Add folder…	添加文件夹…
 Excluded folders	排除的文件夹
-Nothing inside these folders shows up in results.	这些文件夹中的内容不会出现在结果中。
-None.	无。
 Remove	移除
 Choose a folder to leave out of file search	选择要从文件搜索中排除的文件夹
-Preview files with Space	按 Space 预览文件
-Select a file in Explorer and press Space to preview it; Space or Esc closes.	在资源管理器中选中文件后按 Space 预览，按 Space 或 Esc 关闭。
 How to search	搜索方法
 **Apps** — type part of the name, its initials or pinyin: `wx`, `weixin` and `微信` all find 微信; `vsc` finds Visual Studio Code.	**应用** — 输入名称的一部分、首字母或拼音：`wx`、`weixin` 和 `微信` 都能找到微信；`vsc` 能找到 Visual Studio Code。
 **Files** — all words must be in the name. `ext:mp4;mkv` or `*.pdf` filter by type, `folder:` / `file:` by kind, and a word with a backslash (`work\report`) matches the whole path.	**文件** — 所有词都必须出现在名称中。`ext:mp4;mkv` 或 `*.pdf` 按类型筛选，`folder:` / `file:` 按种类筛选，带反斜杠的词（`work\report`）匹配完整路径。
@@ -184,7 +157,6 @@ No tasks yet. Type one above and press Enter.	还没有待办。在上方输入�
 # --- General ---
 The wallpaper, performance, pausing and startup.	壁纸、性能、暂停和启动。
 The language of Chao Desk's windows, menus and desktop widgets.	Chao Desk 窗口、菜单和桌面小组件使用的语言。
-Light, dark, or the same as Windows.	浅色、深色，或跟随 Windows。
 Same as Windows	跟随 Windows
 Light	浅色
 Dark	深色
@@ -245,3 +217,143 @@ Show the translation as soon as the text is recognised.	识别完成后立即显
 Choose an area or a window, mark it up, then copy, save or pin it.	选择区域或窗口，标注后复制、保存或贴图。
 Enter, Ctrl+C or a double-click copies · Ctrl+S saves · Ctrl+T or {0} pins it to the screen · T recognises the text · C copies the colour under the mouse · right-click or Esc cancels.	Enter、Ctrl+C 或双击复制 · Ctrl+S 保存 · Ctrl+T 或 {0} 贴到屏幕上 · T 识别文字 · C 复制鼠标处的颜色 · 右键或 Esc 取消。
 Enter, Ctrl+C or a double-click copies · Ctrl+S saves · Ctrl+T pins it to the screen · T recognises the text · C copies the colour under the mouse · right-click or Esc cancels.	Enter、Ctrl+C 或双击复制 · Ctrl+S 保存 · Ctrl+T 贴到屏幕上 · T 识别文字 · C 复制鼠标处的颜色 · 右键或 Esc 取消。
+
+# Home page
+Good morning	上午好
+Good afternoon	下午好
+Good evening	晚上好
+Copied today	今天复制
+Clipboard history is off.	剪贴板历史已关闭。
+Same as yesterday	和昨天一样
+{0:+0;-0}% vs yesterday	比昨天 {0:+0;-0}%
+Most opened	最常打开
+Nothing yet	还没有
+{0} to open the launcher	按 {0} 打开启动器
+Then {0}	其次：{0}
+Opened {0} times	打开过 {0} 次
+Screenshots this week	本周截图
+{0} to capture	按 {0} 截图
+Indexed files	已索引文件
+Up to date	已同步
+Nothing copied yet.	还没有复制过内容。
+{0} of {1} done	已完成 {0}/{1}
+No tasks.	没有待办。
+All done.	全部完成。
+All tasks	全部待办
+
+# Launcher page
+Global hotkey	全局快捷键
+Press it anywhere to open the launcher	随时按下，打开启动器
+
+# Launcher page, sidebar
+Update	更新
+Overview	概览
+Screenshot and OCR	截图与识字
+Works in any app. Press it again to close.	在任何程序里都有效，再按一次关闭。
+Finds any file as you type, like Everything.	输入即找到任何文件，类似 Everything。
+Index	索引
+Also shows hidden files such as the Recycle Bin.	也显示回收站这类隐藏文件。
+Quick Look with Space	按空格快速查看
+Select a file in Explorer and press Space to preview it.	在资源管理器里选中文件后按空格预览。
+Nothing inside these folders shows up in search results.	这些文件夹里的内容不会出现在搜索结果中。
+New version {0}	新版本 {0}
+A new version is ready to install.	新版本可以安装了。
+
+# Launcher sections
+Best match	最佳匹配
+Commands	命令
+
+# Sidebar version
+Version {0}	版本 {0}
+
+# Home banner
+{0} is on your desktop	{0}，正在你的桌面上
+The wallpaper is off.	壁纸已关闭。
+
+# Hotkey keycaps
+Click and press a new combination. Backspace turns it off.	点一下再按新的组合键；按 Backspace 关闭快捷键。
+
+# Launcher footer
+Forget recently used apps and commands	忘掉最近用过的应用和命令
+History cleared.	已清除历史。
+
+# Launcher Enter key
+Preview	预览
+Keys: Enter open · Ctrl+Enter show in folder · Shift+Enter Quick Look · Ctrl+S sort files · Tab next filter · right-click for more	按键：Enter 打开 · Ctrl+Enter 在文件夹中显示 · Shift+Enter 快速查看 · Ctrl+S 文件排序 · Tab 切换筛选 · 右键查看更多
+
+# Theme colour
+
+# Theme colour, custom
+
+# Theme palettes
+Theme	主题
+
+# Background colour
+
+# Colour picker
+Pick any colour	自选颜色
+Type a colour as #RRGGBB, for example #3366CC.	输入颜色，格式 #RRGGBB，例如 #3366CC。
+
+# Themes
+Page colour	底色
+Accent	强调色
+
+# Appearance page
+My theme {0}	我的主题 {0}
+Pick a theme, then adjust it to taste. You can always restore it.	选一个主题，再按喜好调整；随时可以还原。
+Your theme, based on {0}	你的主题，基于「{0}」
+Delete theme	删除主题
+Adjusted: {0}	已调整：{0}
+Restore theme	还原主题
+Save as my theme	另存为我的主题
+Adjusted	已调整
+New theme	新建主题
+Save the current theme, with its adjustments, as your own	把当前主题连同调整保存为你自己的主题
+Plain	纯色
+Gradient	渐变
+Glow	光晕
+Picture	图片
+Background	背景
+Click to change this colour	点击更换这个颜色
++ Colour	+ 颜色
+Right-click a colour to remove it	右键点击色点可删除
+Colours	颜色
+Direction	方向
+Choose another picture…	换一张图片…
+The theme's own	主题自带
+Grain	颗粒纹理
+Strong	明显
+Home banner	首页横幅
+Pictures	图片
+Choose a background picture	选择背景图片
+Card material	卡片材质
+Corners	圆角
+Square	直角
+Round	圆润
+Clear	通透
+Solid	实色
+For frosted glass cards	用于毛玻璃卡片
+Card opacity	卡片透明度
+Aa Good	Aa 好
+Title font	标题字体
+Body font	正文字体
+System	系统默认
+Same as titles	跟随标题
+Monospace	等宽
+Size	界面大小
+Sidebar style	侧栏样式
+Current page	选中样式
+Icons	图标
+Grey	灰色
+Hidden	隐藏
+Narrow	窄
+Wide	宽
+Width	宽度
+Density	密度
+Compact	紧凑
+Default	默认
+Roomy	宽松
+Theme changes	切换主题时
+Glide	平滑过渡
+Switch at once	立即切换
+Themes, colours, fonts and the sidebar. Changes show at once.	主题、颜色、字体和侧栏，改动会立刻显示。

@@ -11,7 +11,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>ChaoDesk</AssemblyName>
     <RootNamespace>ChaoDesk.Host</RootNamespace>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <Product>Chao Desk</Product>
     <ApplicationIcon>Assets\chaodesk.ico</ApplicationIcon>
   </PropertyGroup>
@@ -26,6 +26,9 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Assets\chaodesk.ico" />
+    <EmbeddedResource Include="Assets\home-hero.jpg" />
+    <EmbeddedResource Include="Assets\hero-summer.jpg" />
+    <EmbeddedResource Include="Assets\hero-autumn.jpg" />
     <Resource Include="Panel\GlassLens.ps" />
     <Resource Include="Panel\GlassGlyph.ps" />
     <Resource Include="Panel\Maps\*.jpg;Panel\Maps\*.png;Panel\Maps\LICENSE.txt" />

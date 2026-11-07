@@ -43,6 +43,23 @@ public sealed class LauncherItem : INotifyPropertyChanged
         set { _hint = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Hint))); }
     }
 
+    private string _header = "";
+
+    /// <summary>The small section title shown above this row ("Best match", "Files", "Apps"), or empty.</summary>
+    public string Header
+    {
+        get => _header;
+        set { if (_header == value) return; _header = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Header))); }
+    }
+
+    /// <summary>What Enter does with this row, shown on the selected row's key ("Open", "Copy").</summary>
+    public string ActionLabel => Kind switch
+    {
+        LauncherItemKind.Calculation => Loc.T("Copy"),
+        LauncherItemKind.Setup => Loc.T("Set up…"),
+        _ => Loc.T("Open"),
+    };
+
     public string KindLabel => Kind switch
     {
         LauncherItemKind.App => Loc.T("App"),

@@ -19,6 +19,26 @@ public sealed class AppSettings
     /// <summary>"system" (follow Windows), "light" or "dark" — see <see cref="ThemeManager"/>.</summary>
     public string Theme { get; set; } = "system";
 
+    /// <summary>The theme: an id from <see cref="ThemeManager.Palettes"/> or of one of <see cref="UserThemes"/>.</summary>
+    public string Palette { get; set; } = "celadon";
+
+    /// <summary>The user's adjustments per built-in theme (kept when switching away, undone by "restore").</summary>
+    public Dictionary<string, ThemeManager.Adjust> ThemeAdjustments { get; set; } = new();
+
+    /// <summary>Themes of the user's own: a built-in theme with adjustments, under a name.</summary>
+    public List<ThemeManager.UserTheme> UserThemes { get; set; } = new();
+
+    /// <summary>An older version's theme of one's own (page colour, accent, contrast, banner). Turned into a user theme on load.</summary>
+    public OldCustomTheme? CustomTheme { get; set; }
+
+    public sealed record OldCustomTheme(string Base, string Accent, double Contrast, string Hero);
+
+    /// <summary>Older versions: an accent over the theme ("#RRGGBB"). Turned into a theme of one's own on load.</summary>
+    public string AccentColor { get; set; } = "";
+
+    /// <summary>Older versions: a page colour over the theme ("#RRGGBB"). Turned into a theme of one's own on load.</summary>
+    public string BackgroundColor { get; set; } = "";
+
     /// <summary>"system" (the Windows display language), "en" or "zh" — see <see cref="Localization.Loc"/>.</summary>
     public string Language { get; set; } = "system";
 
@@ -177,6 +197,30 @@ public sealed class AppSettings
         if (!AllowedRenderScales.Any(s => Math.Abs(s - RenderScale) < 0.001)) RenderScale = 1.0;
         CurrentWallpaperId = string.IsNullOrWhiteSpace(CurrentWallpaperId) ? "lotus-pond" : CurrentWallpaperId;
         if (!ThemeManager.Modes.Contains(Theme)) Theme = "system";
+        ThemeAdjustments ??= new();
+        UserThemes ??= new();
+        UserThemes.RemoveAll(u => u == null || string.IsNullOrWhiteSpace(u.Id) || u.Adjust == null);
+        bool oldAccent = ThemeManager.TryParseAccent(AccentColor, out _), oldBackground = ThemeManager.TryParseAccent(BackgroundColor, out _);
+        if (CustomTheme != null || oldAccent || oldBackground)
+        {
+            // Colours of one's own from an older version: keep the look as a theme of the user's own.
+            string? accent = CustomTheme?.Accent ?? (oldAccent ? AccentColor : null);
+            string? page = CustomTheme?.Base ?? (oldBackground ? BackgroundColor : null);
+            if (!ThemeManager.TryParseAccent(accent, out _)) accent = null;
+            bool pageOk = ThemeManager.TryParseAccent(page, out var pageColour);
+            bool dark = pageOk && ThemeManager.Lightness(pageColour) < 0.2;
+            var solid = pageOk ? new ThemeManager.Backdrop("solid", [ThemeManager.Hex(pageColour)]) : null;
+            var adjust = new ThemeManager.Adjust(Accent: accent, AccentEnd: accent != null ? "" : null, Light: dark ? null : solid, Dark: dark ? solid : null,
+                Hero: CustomTheme != null ? CustomTheme.Hero ?? "" : null);
+            string baseId = CustomTheme != null || Palette == "custom" ? "celadon" : ThemeManager.FindPalette(Palette).Id;
+            if (!UserThemes.Any(u => u.Id == "my-earlier"))
+                UserThemes.Add(new ThemeManager.UserTheme("my-earlier", "My theme", baseId, adjust));
+            if (Palette == "custom" || oldAccent || oldBackground) Palette = "my-earlier";
+            CustomTheme = null;
+        }
+        AccentColor = "";
+        BackgroundColor = "";
+        if (!UserThemes.Any(u => u.Id == Palette)) Palette = ThemeManager.FindPalette(Palette).Id;
         if (!Localization.Loc.Modes.Contains(Language)) Language = "system";
         if (!Translate.Translator.Engines.Contains(TranslateEngine)) TranslateEngine = "auto";
         if (!Translate.Translator.Targets.Contains(TranslateTarget)) TranslateTarget = "auto";

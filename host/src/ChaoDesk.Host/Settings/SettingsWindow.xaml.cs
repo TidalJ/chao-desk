@@ -70,6 +70,13 @@ public interface ISettingsHost
     bool QuickScreenshotSaves { get; set; }
     bool QuickLookEnabled { get; set; }
     string Theme { get; set; }
+    /// <summary>The theme in use: a built-in id or one of the user's own.</summary>
+    string Palette { get; set; }
+    /// <summary>The adjustments of the theme in use.</summary>
+    ThemeManager.Adjust ThemeAdjust { get; set; }
+    /// <summary>Saves the theme in use, with its adjustments, as one of the user's own and switches to it.</summary>
+    void SaveTheme();
+    void DeleteTheme(string id);
     string Language { get; set; }
     string TranslateEngine { get; set; }
     string TranslateTarget { get; set; }
@@ -81,6 +88,7 @@ public interface ISettingsHost
     int ClipboardMaxItems { get; set; }
     string ClipboardIgnoredApps { get; set; }
     int ClipboardCount { get; }
+    HomeStats HomeStats { get; }
     void ClearClipboardHistory();
     bool FileSearchEnabled { get; set; }
     bool FileSearchIncludeHidden { get; set; }
@@ -113,7 +121,10 @@ public partial class SettingsWindow : Window
     {
         _host = host;
         InitializeComponent();
-        VersionText.Text = Loc.F("Version {0}", typeof(App).Assembly.GetName().Version?.ToString(3));
+        // The roomy default size, but never larger than the screen's work area (small laptops).
+        var area = SystemParameters.WorkArea;
+        Width = Math.Min(Width, Math.Max(MinWidth, area.Width - 40));
+        Height = Math.Min(Height, Math.Max(MinHeight, area.Height - 40));
         FillHelpTexts();
         using (var s = typeof(App).Assembly.GetManifestResourceStream("ChaoDesk.Host.Assets.chaodesk.ico"))
         {
@@ -132,10 +143,14 @@ public partial class SettingsWindow : Window
 
         _host.StateChanged += OnHostStateChanged;
         _host.Updates.Changed += UpdateUpdatesRow;
+        ThemeManager.Changed += OnColoursChanged;
+        UpdateBackdrop();
+        ApplyChrome();
         Closed += (_, _) =>
         {
             _host.StateChanged -= OnHostStateChanged;
             _host.Updates.Changed -= UpdateUpdatesRow;
+            ThemeManager.Changed -= OnColoursChanged;
             _diagTimer.Stop();
         };
 
@@ -154,6 +169,7 @@ public partial class SettingsWindow : Window
         _panelEditor = new PanelActionsEditor(_host.PanelActions, _host.SuspendHotkeys);
         PanelActionsHost.Content = _panelEditor;
         foreach (var box in _hotkeyBoxes) WireHotkeyBox(box);
+        WireBigKeycaps(LauncherHotkeyBox, LauncherHotkeyCaps, LauncherHotkeyFrame);
         LoadScreenshot();
         UpdateStatus();
     }
@@ -166,6 +182,7 @@ public partial class SettingsWindow : Window
             "tasks" => NavTasks,
             "widgets" => NavWidgets,
             "general" => NavGeneral,
+            "appearance" => NavAppearance,
             "diagnostics" => NavDiagnostics,
             "library" => NavLibrary,
             "clipboard" => NavClipboard,
@@ -187,7 +204,23 @@ public partial class SettingsWindow : Window
         if (ClipboardPage.Visibility == Visibility.Visible) ClipboardCountText.Text = ClipboardCountLine();
     }
 
-    private void UpdateStatus() => StatusText.Text = _host.StatusSummary;
+    /// <summary>The sidebar card: the version (or the new one waiting), and what is running.</summary>
+    private void UpdateStatus()
+    {
+        var u = _host.Updates;
+        bool available = u.State == Update.UpdateState.Available && u.Latest != null;
+        UpdateCard.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
+        if (available) SideCardTitle.Text = Loc.F("New version {0}", u.Latest!.Version);
+        // One small line: the version; what is running shows when the mouse rests on it.
+        StatusText.Text = Loc.F("Version {0}", Update.UpdateService.Current);
+        StatusText.ToolTip = string.IsNullOrEmpty(_host.StatusSummary) ? null : _host.StatusSummary;
+    }
+
+    private void OnSideUpdate(object sender, RoutedEventArgs e)
+    {
+        NavGeneral.IsChecked = true;
+        OnUpdateButton(sender, e);
+    }
 
     private void OnNavChanged(object sender, RoutedEventArgs e)
     {
@@ -208,6 +241,8 @@ public partial class SettingsWindow : Window
         LibraryPage.Visibility = NavLibrary.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         PropertiesPage.Visibility = NavProperties.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         GeneralPage.Visibility = NavGeneral.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        AppearancePage.Visibility = NavAppearance.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        if (NavAppearance.IsChecked == true) BuildAppearance();
         TasksPage.Visibility = NavTasks.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         WidgetsPage.Visibility = NavWidgets.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         if (NavWidgets.IsChecked == true) BuildWidgets();
@@ -240,8 +275,8 @@ public partial class SettingsWindow : Window
         {
             Width = 260,
             Margin = new Thickness(0, 0, 16, 16),
-            CornerRadius = new CornerRadius(6),
-            Background = (Brush)FindResource("CardBrush"),
+            CornerRadius = new CornerRadius(14),
+            Background = (Brush)FindResource("SurfaceBrush"),
             BorderBrush = active ? (Brush)FindResource("AccentBrush") : (Brush)FindResource("LineBrush"),
             BorderThickness = new Thickness(active ? 2 : 1),
             Cursor = Cursors.Hand,
@@ -252,7 +287,7 @@ public partial class SettingsWindow : Window
         var previewHost = new Border
         {
             Height = 146,
-            CornerRadius = new CornerRadius(5, 5, 0, 0),
+            CornerRadius = new CornerRadius(13, 13, 0, 0),
             ClipToBounds = true,
             Background = new LinearGradientBrush(ParseColor(pkg.Manifest.Background), Darken(ParseColor(pkg.Manifest.Background), 0.6), 45),
         };
@@ -272,7 +307,7 @@ public partial class SettingsWindow : Window
             };
         }
         // Rounded top corners: clip the image with a geometry matching the border.
-        previewHost.Loaded += (_, _) => previewHost.Clip = new RectangleGeometry(new Rect(0, 0, previewHost.ActualWidth, previewHost.ActualHeight + 6), 5, 5);
+        previewHost.Loaded += (_, _) => previewHost.Clip = new RectangleGeometry(new Rect(0, 0, previewHost.ActualWidth, previewHost.ActualHeight + 14), 13, 13);
         stack.Children.Add(previewHost);
 
         var info = new Grid { Margin = new Thickness(14, 10, 14, 12) };
@@ -286,7 +321,7 @@ public partial class SettingsWindow : Window
         {
             info.Children.Add(new Border
             {
-                Background = (Brush)FindResource("AccentSoftBrush"),
+                Background = (Brush)FindResource("TileBrush"),
                 CornerRadius = new CornerRadius(4),
                 Padding = new Thickness(7, 2, 7, 3),
                 HorizontalAlignment = HorizontalAlignment.Right,
@@ -537,8 +572,6 @@ public partial class SettingsWindow : Window
         WallpaperCheck.IsChecked = s.WallpaperEnabled;
         DesktopWidgetsCheck.IsChecked = s.DesktopWidgets;
         DesktopWidgetsCheck.IsEnabled = !s.WallpaperEnabled;
-        ThemeCombo.ItemsSource = new[] { Loc.T("Same as Windows"), Loc.T("Light"), Loc.T("Dark") };
-        ThemeCombo.SelectedIndex = Math.Max(0, Array.IndexOf(ThemeManager.Modes, _host.Theme));
         // Each language in its own name, so it can be found whatever the window is in.
         LanguageCombo.ItemsSource = new[] { Loc.T("Same as Windows"), "English", "简体中文" };
         LanguageCombo.SelectedIndex = Math.Max(0, Array.IndexOf(Loc.Modes, _host.Language));
@@ -573,6 +606,7 @@ public partial class SettingsWindow : Window
     {
         var u = _host.Updates;
         var latest = u.Latest;
+        UpdateStatus();
         UpdateTitle.Text = $"Chao Desk {Update.UpdateService.Current}";
         UpdateStatusText.Text = u.State switch
         {
@@ -620,83 +654,10 @@ public partial class SettingsWindow : Window
         if (TranslateEngineCombo.SelectedIndex >= 0) _host.TranslateEngine = Translator.Engines[TranslateEngineCombo.SelectedIndex];
     }
 
-    private void OnThemeChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (_loading || ThemeCombo.SelectedIndex < 0) return;
-        string mode = ThemeManager.Modes[ThemeCombo.SelectedIndex];
-        Dispatcher.BeginInvoke(() => _host.Theme = mode); // after the combo box has closed
-    }
 
     private void OnCityKey(object sender, System.Windows.Input.KeyEventArgs e)
     {
         if (e.Key == System.Windows.Input.Key.Enter) OnGeneralChanged(sender, e);
-    }
-
-    // ---- Home ------------------------------------------------------------------------------------------
-
-    private void BuildHome()
-    {
-        HomePanel.Children.Clear();
-        string Hk(string which) => _host.HotkeyText(which) is { Length: > 0 } k ? k : Loc.T("no hotkey");
-        HomePanel.Children.Add(HomeCard(Loc.T("Action panel"), "\uE80A", NavPanel,
-            Hk("panel"), Loc.T("Open the action panel for clipboard, screenshots, text recognition and translation."),
-            (Loc.T("Open"), () => _host.OpenTool("panel"))));
-        HomePanel.Children.Add(HomeCard(Loc.T("Launcher"), "\uE721", NavLauncher,
-            Loc.F("{0} · apps, files, sums and commands", Hk("launcher")),
-            _host.FileSearchStatus, (Loc.T("Open"), () => _host.OpenTool("launcher"))));
-        HomePanel.Children.Add(HomeCard(Loc.T("Clipboard"), "\uE77F", NavClipboard,
-            _host.ClipboardEnabled ? Loc.F("{0} · paste anything you copied", Hk("clipboard")) : Loc.T("Off"),
-            ClipboardCountLine(), (Loc.T("Open"), () => _host.OpenTool("clipboard"))));
-        HomePanel.Children.Add(HomeCard(Loc.T("Screenshot"), "\uE722", NavScreenshot,
-            Loc.F("{0} capture · {1} whole screen · {2} pin", Hk("screenshot"), Hk("quickshot"), Hk("pin")),
-            Loc.F("Scrolling capture {0} · saved to {1}", Hk("scrollshot"), _host.ScreenshotFolder), (Loc.T("Capture"), () => _host.OpenTool("screenshot"))));
-        HomePanel.Children.Add(HomeCard(Loc.T("Text recognition"), "", NavScreenshot,
-            Loc.F("{0} · read the text in any part of the screen, offline", Hk("ocr")),
-            Loc.F("Languages: {0}", string.Join(Loc.Pick(", ", "；"), Ocr.OcrPacks.Installed.Select(p => Loc.T(p.Name)))),
-            (Loc.T("Recognise"), () => _host.OpenTool("ocr"))));
-        HomePanel.Children.Add(HomeCard(Loc.T("Quick Look"), "\uE8FF", NavLauncher,
-            _host.QuickLookEnabled ? Loc.T("Space in Explorer previews the selected file") : Loc.T("Off"),
-            Loc.T("Pictures, PDF, video, music, text, Office documents, folders"), null));
-        HomePanel.Children.Add(HomeCard(Loc.T("Wallpaper"), "\uE771", NavGeneral,
-            _host.Settings.WallpaperEnabled ? Loc.T("The lotus pond behind your icons")
-                : _host.Settings.DesktopWidgets ? Loc.T("Off — your widgets stay on the Windows wallpaper") : Loc.T("Off — Windows' own wallpaper shows"),
-            _host.StatusSummary, null));
-        HomePanel.Children.Add(HomeCard(Loc.T("Appearance"), "\uE790", NavGeneral,
-            _host.Theme switch { "light" => Loc.T("Light"), "dark" => Loc.T("Dark"), _ => Loc.T("Same as Windows") },
-            Loc.T("Change it under General"), null));
-    }
-
-    /// <summary>A tool's row: icon, name, what it does and its status, then text links (its action and its settings).</summary>
-    private Border HomeCard(string title, string glyph, RadioButton page, string line1, string line2, (string Label, Action Run)? action)
-    {
-        var grid = new Grid();
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.ColumnDefinitions.Add(new ColumnDefinition());
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var glyphText = new TextBlock { Text = glyph, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 20, Width = 24, Margin = new Thickness(0, 1, 18, 0), VerticalAlignment = VerticalAlignment.Top };
-        glyphText.SetResourceReference(TextBlock.ForegroundProperty, "InkBrush");
-        grid.Children.Add(glyphText);
-        var texts = new StackPanel();
-        Grid.SetColumn(texts, 1);
-        texts.Children.Add(new TextBlock { Text = title, FontSize = 15, FontWeight = FontWeights.SemiBold });
-        texts.Children.Add(new TextBlock { Text = line1, Style = (Style)FindResource("SettingHint"), Margin = new Thickness(0, 4, 0, 0) });
-        texts.Children.Add(new TextBlock { Text = line2, Style = (Style)FindResource("SettingHint"), TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap });
-        grid.Children.Add(texts);
-        var links = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(24, -3, 0, 0) };
-        Grid.SetColumn(links, 2);
-        if (action is { } a) links.Children.Add(HomeLink(a.Label, a.Run));
-        links.Children.Add(HomeLink(Loc.T("Settings"), () => page.IsChecked = true));
-        grid.Children.Add(links);
-        var row = new Border { Padding = new Thickness(4, 16, 4, 16), BorderThickness = new Thickness(0, 0, 0, 1), Child = grid };
-        row.SetResourceReference(Border.BorderBrushProperty, "LineBrush");
-        return row;
-    }
-
-    private Button HomeLink(string text, Action run)
-    {
-        var link = new Button { Content = text, Style = (Style)FindResource("TextButton"), Margin = new Thickness(4, 0, 0, 0) };
-        link.Click += (_, _) => run();
-        return link;
     }
 
     // ---- Launcher and file search -----------------------------------------------------------------------
@@ -719,6 +680,7 @@ public partial class SettingsWindow : Window
         var state = _host.FileSearchState;
         string memory = state is FileIndexState.Ready or FileIndexState.Indexing ? " · " + Loc.F("about {0:N0} MB of memory", _host.FileIndexMemory / (1024 * 1024)) : "";
         FileSearchStatusText.Text = _host.FileSearchStatus + memory;
+        FileSearchDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, state == FileIndexState.Ready ? "SuccessBrush" : state is FileIndexState.Failed or FileIndexState.NeedsRepair ? "DangerBrush" : "PlaceholderBrush");
         bool canSetUp = state is FileIndexState.NotSetUp or FileIndexState.NeedsRepair or FileIndexState.Failed;
         _fileSearchSetupRemoves = !canSetUp;
         FileSearchSetupButton.Content = state switch
@@ -782,21 +744,25 @@ public partial class SettingsWindow : Window
     private void BuildExcluded()
     {
         ExcludedPanel.Children.Clear();
-        if (_host.FileSearchExcluded.Count == 0)
-        {
-            ExcludedPanel.Children.Add(new TextBlock { Text = Loc.T("None."), Style = (Style)FindResource("SettingHint") });
-            return;
-        }
         foreach (string folder in _host.FileSearchExcluded)
         {
-            var row = new DockPanel { Margin = new Thickness(0, 2, 0, 2) };
-            var remove = new Button { Content = Loc.T("Remove"), Style = (Style)FindResource("SecondaryButton"), Padding = new Thickness(10, 3, 10, 3) };
+            // A pill: the folder, then a small round × that removes it.
+            var remove = new Button
+            {
+                Content = "", FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 9,
+                Style = (Style)FindResource("TextButton"), Padding = new Thickness(6), Margin = new Thickness(6, 0, 0, 0),
+                ToolTip = Loc.T("Remove"), VerticalAlignment = VerticalAlignment.Center,
+            };
+            remove.SetResourceReference(ForegroundProperty, "MutedBrush");
             remove.Click += (_, _) => { _host.SetFileSearchExcluded(_host.FileSearchExcluded.Where(f => f != folder).ToList()); BuildExcluded(); };
-            DockPanel.SetDock(remove, Dock.Right);
-            row.Children.Add(remove);
-            row.Children.Add(new TextBlock { Text = folder, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
-            ExcludedPanel.Children.Add(row);
+            var content = new StackPanel { Orientation = Orientation.Horizontal };
+            content.Children.Add(new TextBlock { Text = folder, FontSize = 12.5, VerticalAlignment = VerticalAlignment.Center, MaxWidth = 360, TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = folder });
+            content.Children.Add(remove);
+            var pill = Launcher.Pill.Round(new Border { Padding = new Thickness(14, 3, 4, 3), Margin = new Thickness(0, 0, 8, 8), Child = content });
+            pill.SetResourceReference(Border.BackgroundProperty, "TileBrush");
+            ExcludedPanel.Children.Add(pill);
         }
+        ExcludedPanel.Children.Add(FileSkipJunkCheck); // the bulky-folders switch is the last pill
     }
 
     private void OnAddExcludedFolder(object sender, RoutedEventArgs e)

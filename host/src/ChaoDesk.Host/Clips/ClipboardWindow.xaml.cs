@@ -100,8 +100,9 @@ public partial class ClipboardWindow : Window
         _fileDebounce = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(180) };
         _fileDebounce.Tick += (_, _) => { _fileDebounce.Stop(); LoadPendingFile(); };
         _chips = FilterNames.Select(MakeChip).ToArray();
-        foreach (var chip in _chips) FilterPanel.Children.Add(chip);
+        foreach (var chip in _chips) FilterPanel.Children.Add(Launcher.FilterTab.Wrap(chip));
         UpdateChips();
+        Launcher.KeyHints.Render(KeysText, Loc.T("Enter paste · Ctrl+T translate · right-click for more"));
         _previewButton = IconButton.Create("\uE89F", "", () => { SetPreview(!PreviewOn, animate: true); PreviewToggled?.Invoke(PreviewOn); QueryBox.Focus(); });
         _previewButton.Margin = new Thickness(14, 0, 0, 0);
         _pinButton = IconButton.Create("\uE718", "", () => { SetPinned(!_pinned); QueryBox.Focus(); });
@@ -333,14 +334,17 @@ public partial class ClipboardWindow : Window
         return old != null && old.PinnedWhenMade == item.Pinned && old.Title == fresh.Title && old.Subtitle == fresh.Subtitle ? old : fresh;
     }
 
+    /// <summary>An entry's one-line title: the text, the picture's size or the file names.</summary>
+    internal static string TitleOf(ClipItem item) => item.Kind switch
+    {
+        ClipKind.Image => Loc.F("Image {0} × {1}", item.ImageWidth, item.ImageHeight),
+        ClipKind.Files => item.Files.Length == 1 ? Path.GetFileName(item.Files[0]) : Loc.F("{0} files: {1}", item.Files.Length, string.Join(", ", item.Files.Take(3).Select(Path.GetFileName))),
+        _ => OneLine(item.Text),
+    };
+
     private ClipRow MakeRow(ClipItem item)
     {
-        string title = item.Kind switch
-        {
-            ClipKind.Image => Loc.F("Image {0} × {1}", item.ImageWidth, item.ImageHeight),
-            ClipKind.Files => item.Files.Length == 1 ? Path.GetFileName(item.Files[0]) : Loc.F("{0} files: {1}", item.Files.Length, string.Join(", ", item.Files.Take(3).Select(Path.GetFileName))),
-            _ => OneLine(item.Text),
-        };
+        string title = TitleOf(item);
         string detail = item.Kind switch
         {
             ClipKind.Text => item.Text.Length == 1 ? Loc.F("{0:N0} character", item.Text.Length) : Loc.F("{0:N0} characters", item.Text.Length),

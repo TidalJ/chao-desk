@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows.Input;
 using ChaoDesk.Host.Input;
 using ChaoDesk.Host.Launcher;
@@ -132,34 +133,27 @@ public class LauncherSearchTests
     }
 
     [Fact]
-    public void ForgettingRemovesUseAndLearnedQueriesButKeepsPins()
+    public void ForgettingRemovesUseAndLearnedQueries()
     {
         var apps = new[] { App("WPS Office"), App("微信") };
         var stats = new LaunchStats();
         var now = new DateTime(2026, 10, 17);
         stats.Record("app:微信", "w", now);
         stats.Record("app:WPS Office", "wp", now);
-        stats.TogglePin(new LauncherItem { Id = "app:WPS Office", Title = "WPS Office", Kind = LauncherItemKind.App });
         stats.Forget("app:微信");
         Assert.DoesNotContain("app:微信", stats.Frequent(10));
         Assert.Equal("WPS Office", LauncherSearch.Rank(apps, [], "w", stats, now)[0].App!.Name);
         stats.ClearHistory();
         Assert.Empty(stats.Frequent(10));
-        Assert.Single(stats.Pins);
     }
 
     [Fact]
-    public void PinnedAppsRiseAndUnpinningUndoesIt()
+    public void OldStatsWithPinsStillLoad()
     {
-        var apps = new[] { App("WPS Office"), App("WinRAR") };
-        var stats = new LaunchStats();
-        var now = new DateTime(2026, 10, 17);
-        Assert.Equal("WinRAR", LauncherSearch.Rank(apps, [], "w", stats, now)[0].App!.Name); // shorter name first on a tie
-        var wps = new LauncherItem { Id = "app:WPS Office", Title = "WPS Office", Kind = LauncherItemKind.App };
-        Assert.True(stats.TogglePin(wps));
-        Assert.Equal("WPS Office", LauncherSearch.Rank(apps, [], "w", stats, now)[0].App!.Name);
-        Assert.False(stats.TogglePin(wps));
-        Assert.Empty(stats.Pins);
+        string path = Path.Combine(Path.GetTempPath(), $"chaodesk-stats-{Guid.NewGuid():N}.json");
+        File.WriteAllText(path, """{"items":{"app:WPS Office":{"count":3,"last":"2026-10-17T00:00:00"}},"queries":{},"pins":[{"id":"app:WPS Office","title":"WPS Office","kind":0}]}""");
+        try { Assert.Equal("app:WPS Office", Assert.Single(LaunchStats.Load(path).Frequent(10))); }
+        finally { File.Delete(path); }
     }
 
     [Fact]

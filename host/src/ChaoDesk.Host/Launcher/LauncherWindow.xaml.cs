@@ -65,7 +65,7 @@ public partial class LauncherWindow : Window
     private Preview.PreviewPane? _preview;
     private readonly DispatcherTimer _previewDebounce;
     private LauncherItem? _detailsFor;
-    private const double ListWidth = 640, DetailsWidth = 440; // the list column (as in the XAML) and the details
+    private const double ListWidth = 560, DetailsWidth = 320; // the list column (as in the XAML) and the details
     private readonly Border _detailsButton;
     private readonly DispatcherTimer _leaveWatch;
     private bool _detailsOn;
@@ -77,14 +77,15 @@ public partial class LauncherWindow : Window
         InitializeComponent();
         Results.ItemsSource = _items;
         _chips = new[] { Loc.T("All"), Loc.T("Apps"), Loc.T("Files") }.Select(MakeChip).ToArray();
-        foreach (var chip in _chips) FilterPanel.Children.Add(chip);
-        _sortChip = new TextBlock { Style = (Style)FindResource("FilterChip"), ToolTip = Loc.T("Sort files (Ctrl+S)"), Margin = new Thickness(10, 0, 2, 0) };
+        foreach (var chip in _chips) FilterPanel.Children.Add(FilterTab.Wrap(chip));
+        _sortChip = new TextBlock { Style = (Style)FindResource("FilterChip"), ToolTip = Loc.T("Sort files (Ctrl+S)"), Margin = new Thickness(0, 0, 4, 0), VerticalAlignment = VerticalAlignment.Center };
+        _sortChip.MouseLeftButtonDown += (_, e) => e.Handled = true;
         _sortChip.MouseLeftButtonUp += (_, _) => { CycleSort(); QueryBox.Focus(); };
-        FilterPanel.Children.Insert(0, _sortChip);
+        ToolsPanel.Children.Add(_sortChip);
         UpdateChips();
-        _detailsButton = IconButton.Create("\uE89F", "", () => { SetDetails(!_detailsOn, animate: true); _ctx.DetailsToggled(_detailsOn); QueryBox.Focus(); });
-        _detailsButton.Margin = new Thickness(14, 0, 0, 0);
-        FilterPanel.Children.Add(_detailsButton);
+        _detailsButton = MakeDetailsToggle(() => { SetDetails(!_detailsOn, animate: true); _ctx.DetailsToggled(_detailsOn); QueryBox.Focus(); });
+        _detailsButton.Margin = new Thickness(8, 0, 0, 0);
+        ToolsPanel.Children.Add(_detailsButton);
         SetDetails(ctx.ShowDetails, animate: false);
 
         // Files load their preview a moment after the selection settles (arrowing through results stays smooth).
@@ -177,11 +178,9 @@ public partial class LauncherWindow : Window
             var commands = _ctx.Commands();
             if (q.Length == 0)
             {
-                // Empty box: pinned items, then the apps and commands used most.
+                // Empty box: the apps and commands used most.
                 var byId = _ctx.Catalog.Apps.GroupBy(a => a.Id).ToDictionary(g => g.Key, g => g.First());
-                foreach (var pin in _ctx.Stats.Pins)
-                    if (PinItem(pin, byId, commands) is { } pinned) next.Add(pinned);
-                foreach (string id in _ctx.Stats.Frequent(AppsInAll + _ctx.Stats.Pins.Count).Where(id => !_ctx.Stats.IsPinned(id)).Take(AppsInAll))
+                foreach (string id in _ctx.Stats.Frequent(AppsInAll))
                 {
                     var used = byId.TryGetValue(id, out var app) ? AppItem(app)
                         : commands.FirstOrDefault(c => c.Id == id) is { } cmd ? CommandItem(cmd) : null;
@@ -193,14 +192,6 @@ public partial class LauncherWindow : Window
             }
             else
             {
-                // Pinned files and folders whose name matches come first (pinned apps get a boost in the ranking).
-                foreach (var pin in _ctx.Stats.Pins.Where(p => p.Kind is LauncherItemKind.File or LauncherItemKind.Folder && p.Path != null))
-                    if (new SearchKey(pin.Title).Match(q) > 0 && (File.Exists(pin.Path) || Directory.Exists(pin.Path)))
-                    {
-                        var pinned = FileItem(new FileHit(pin.Path!, pin.Title, pin.Kind == LauncherItemKind.Folder));
-                        pinned.Hint = Loc.T("Pinned");
-                        next.Add(pinned);
-                    }
                 int take = _filter == Filter.Apps ? AppsOnly : AppsInAll;
                 foreach (var r in LauncherSearch.Rank(_ctx.Catalog.Apps, commands, query, _ctx.Stats, DateTime.Now).Take(take))
                 {
@@ -273,7 +264,6 @@ public partial class LauncherWindow : Window
         var shown = pending.Where(i => i.Path != null).Select(i => i.Path!).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var cts = new CancellationTokenSource();
         _fileSearch = cts;
-        var started = Stopwatch.StartNew();
         Task.Run(() =>
         {
             var result = _ctx.Files.Search(query, limit, cts.Token);
@@ -295,7 +285,7 @@ public partial class LauncherWindow : Window
             var next = new List<LauncherItem>(pending);
             foreach (var (hit, info) in stats)
             {
-                if (shown.Contains(hit.Path)) continue; // already listed as a pin
+                if (shown.Contains(hit.Path)) continue; // already listed above
                 var item = FileItem(hit);
                 item.Hint = Describe(hit, info);
                 next.Add(item);
@@ -303,10 +293,8 @@ public partial class LauncherWindow : Window
             AddWeakApps(next);
             string by = sort switch { Sort.Name => Loc.T("by name"), Sort.Modified => Loc.T("by date modified"), Sort.Size => Loc.T("by size"), _ => "" };
             if (by.Length > 0 && total > SortPool) by = Loc.F("{0} among the best {1:N0}", by, SortPool);
-            string sorted = by.Length == 0 ? "" : " · " + by;
-            _fileStatus = total == 0 ? Loc.T("No files match")
-                : total == 1 ? Loc.F("{0:N0} file matches{1} · {2} ms", total, sorted, started.ElapsedMilliseconds)
-                : Loc.F("{0:N0} files match{1} · {2} ms", total, sorted, started.ElapsedMilliseconds);
+            // No counts: only the sort order, when it is not the usual one.
+            _fileStatus = by;
             ShowList(next, newQuery: !_pendingShown); // the user may already be arrowing through the early list
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
@@ -340,46 +328,50 @@ public partial class LauncherWindow : Window
         Refresh();
     }
 
-    /// <summary>Ctrl+P: pin or unpin the selected app, command, file or folder.</summary>
-    private void TogglePin()
-    {
-        if (Results.SelectedItem is not LauncherItem { Kind: LauncherItemKind.App or LauncherItemKind.Command or LauncherItemKind.File or LauncherItemKind.Folder } item) return;
-        bool pinned = _ctx.Stats.TogglePin(item);
-        item.Hint = pinned ? Loc.T("Pinned") : item.KindLabel;
-        _ctx.StatsChanged();
-        StatusText.Text = pinned ? Loc.F("Pinned {0}: it shows first when the box is empty.", item.Title) : Loc.F("Unpinned {0}.", item.Title);
-    }
-
-    /// <summary>A pinned item as a row (null when its app is gone or its file was deleted).</summary>
-    private LauncherItem? PinItem(LaunchStats.Pin pin, Dictionary<string, AppEntry> apps, IReadOnlyList<LauncherCommand> commands)
-    {
-        LauncherItem? item = pin.Kind switch
-        {
-            LauncherItemKind.App => apps.TryGetValue(pin.Id, out var app) ? AppItem(app) : null,
-            LauncherItemKind.Command => commands.FirstOrDefault(c => c.Id == pin.Id) is { } cmd ? CommandItem(cmd) : null,
-            LauncherItemKind.File when pin.Path != null && File.Exists(pin.Path) => FileItem(new FileHit(pin.Path, pin.Title, false)),
-            LauncherItemKind.Folder when pin.Path != null && Directory.Exists(pin.Path) => FileItem(new FileHit(pin.Path, pin.Title, true)),
-            _ => null,
-        };
-        if (item != null) item.Hint = Loc.T("Pinned");
-        return item;
-    }
-
     private void AddWeakApps(List<LauncherItem> list)
     {
         list.AddRange(_weakApps);
         _weakApps = new();
     }
 
+    /// <summary>
+    /// Section titles: the first row is the best match (or the recent list when the box is empty); after it a title
+    /// wherever the kind of result changes (files, apps, commands).
+    /// </summary>
+    private void UpdateHeaders()
+    {
+        string? previous = null;
+        bool empty = QueryBox.Text.Length == 0; // the empty box lists recent picks: one title only
+        for (int i = 0; i < _items.Count; i++)
+        {
+            if (empty) { _items[i].Header = i == 0 ? Loc.T("Recent") : ""; continue; }
+            var item = _items[i];
+            string group = item.Kind switch
+            {
+                LauncherItemKind.File or LauncherItemKind.Folder => Loc.T("Files"),
+                LauncherItemKind.App => Loc.T("Apps"),
+                LauncherItemKind.Command => Loc.T("Commands"),
+                _ => "",
+            };
+            item.Header = i == 0 ? (QueryBox.Text.Length == 0 ? Loc.T("Recent") : Loc.T("Best match"))
+                : group.Length > 0 && group != previous ? group : "";
+            // The best match stands alone: the row after it always opens its own section.
+            previous = i == 0 ? null : group;
+        }
+    }
+
     private void AfterItemsChanged()
     {
+        UpdateHeaders();
         // While something is typed the results area stays open, even with no match, so it does not jump shut and open.
         bool show = _items.Count > 0 || QueryBox.Text.Length > 0;
         NoResults.Visibility = _items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         if (show && ResultsHost.Visibility != Visibility.Visible)
         {
+            // Opens at its full height in one step and only fades in: growing the height frame by frame resized the
+            // window a dozen times while the first letter was typed, which stuttered.
             ResultsHost.Visibility = Visibility.Visible;
-            Motion.Expand(ResultsHost, 480); // grows open instead of popping (the window follows its height)
+            Motion.FadeIn(ResultsHost);
         }
         else if (!show && ResultsHost.Visibility == Visibility.Visible)
         {
@@ -388,8 +380,8 @@ public partial class LauncherWindow : Window
         }
         // Never preselect the setup row: Enter right after typing must not start an administrator prompt.
         if (Results.SelectedIndex < 0) Results.SelectedIndex = _items.ToList().FindIndex(i => i.Kind != LauncherItemKind.Setup);
+        if (_items.Count == 0) ClearDetails();
         UpdateStatus();
-        UpdateKeys();
         ClearHistoryLink.Visibility = _items.Any(i => i.FromHistory) ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -410,7 +402,7 @@ public partial class LauncherWindow : Window
         _ctx.Stats.ClearHistory();
         _ctx.StatsChanged();
         Refresh();
-        StatusText.Text = Loc.T("History cleared. Pinned items stay.");
+        StatusText.Text = Loc.T("History cleared.");
         QueryBox.Focus();
     }
 
@@ -438,7 +430,7 @@ public partial class LauncherWindow : Window
         Path = app.Path,
         App = app,
         Icon = app.Icon,
-        Hint = _ctx.Stats.IsPinned(app.Id) ? Loc.T("Pinned") : Loc.T("App"),
+        Hint = Loc.T("App"),
     };
 
     private LauncherItem CommandItem(LauncherCommand cmd) => new()
@@ -494,8 +486,9 @@ public partial class LauncherWindow : Window
 
     private void UpdateStatus()
     {
+        // Quiet when all is well (no file counts); speaks up only while the index is not ready or file search is off.
         if (!_ctx.FileSearchEnabled()) StatusText.Text = _filter == Filter.Files ? Loc.T("File search is turned off in Settings.") : "";
-        else if (_fileStatus.Length > 0 && _ctx.Files.State == FileIndexState.Ready) StatusText.Text = _fileStatus;
+        else if (_ctx.Files.State == FileIndexState.Ready) StatusText.Text = _fileStatus;
         else StatusText.Text = _ctx.Files.StatusText;
     }
 
@@ -505,25 +498,13 @@ public partial class LauncherWindow : Window
         _previewDebounce.Stop();
         if (Results.SelectedItem is LauncherItem { Kind: LauncherItemKind.File or LauncherItemKind.Folder }) _previewDebounce.Start();
         else ShowDetails();
-        UpdateKeys();
         if (Results.SelectedItem != null) Results.ScrollIntoView(Results.SelectedItem);
-    }
-
-    private void UpdateKeys()
-    {
-        KeysText.Text = (Results.SelectedItem as LauncherItem)?.Kind switch
-        {
-            LauncherItemKind.App => Loc.T("Enter or double-click open · right-click more · Ctrl+P pin"),
-            LauncherItemKind.File or LauncherItemKind.Folder => Loc.T("Double-click open · Shift+Enter Quick Look · right-click more · Ctrl+S sort"),
-            LauncherItemKind.Calculation => Loc.T("Enter copy"),
-            null => Loc.T("Tab: All / Apps / Files"),
-            _ => "Enter",
-        };
     }
 
     private TextBlock MakeChip(string text, int index)
     {
         var chip = new TextBlock { Text = text, Style = (Style)FindResource("FilterChip") };
+        chip.MouseLeftButtonDown += (_, e) => e.Handled = true; // in the footer: a click, not a window drag
         chip.MouseLeftButtonUp += (_, _) => { _filter = (Filter)index; UpdateChips(); Refresh(); QueryBox.Focus(); };
         return chip;
     }
@@ -571,9 +552,6 @@ public partial class LauncherWindow : Window
                 break;
             case Key.Delete when QueryBox.Text.Length == 0 && Results.SelectedItem is LauncherItem { FromHistory: true } recent:
                 ForgetItem(recent);
-                break;
-            case Key.P when mods == ModifierKeys.Control:
-                TogglePin();
                 break;
             case Key.S when mods == ModifierKeys.Control:
                 CycleSort();
@@ -627,7 +605,7 @@ public partial class LauncherWindow : Window
     private void SetDetails(bool on, bool animate)
     {
         _detailsOn = on;
-        IconButton.Set(_detailsButton, on, null, on ? Loc.T("Hide the details and preview") : Loc.T("Show the details and preview"));
+        SetDetailsToggle(on);
         animate &= IsVisible;
         _resizingDetails = animate;
         if (on)
@@ -653,6 +631,47 @@ public partial class LauncherWindow : Window
             _resizingDetails = false;
             PreviewHost.Visibility = Visibility.Collapsed;
         });
+    }
+
+    /// <summary>
+    /// The footer's preview switch: a labelled pill (eye + "Preview"); on, it is accent text on the soft accent tint,
+    /// off, a quiet outline. A click, not a window drag.
+    /// </summary>
+    private Border MakeDetailsToggle(Action onClick)
+    {
+        var glyph = new TextBlock { Text = "", FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 13, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 1, 7, 0) };
+        var label = new TextBlock { Text = Loc.T("Preview"), FontSize = 12.5, FontWeight = FontWeights.Medium, VerticalAlignment = VerticalAlignment.Center };
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        row.Children.Add(glyph);
+        row.Children.Add(label);
+        var pill = Pill.Round(new Border { Padding = new Thickness(11, 5, 13, 6), BorderThickness = new Thickness(1), Child = row, Cursor = Cursors.Hand });
+        pill.MouseEnter += (_, _) => { if (!_detailsOn) pill.SetResourceReference(Border.BackgroundProperty, "HoverBrush"); };
+        pill.MouseLeave += (_, _) => { SetDetailsToggle(_detailsOn); Motion.Press(pill, false); };
+        pill.MouseLeftButtonDown += (_, e) => { e.Handled = true; Motion.Press(pill, true); };
+        pill.MouseLeftButtonUp += (_, e) => { e.Handled = true; Motion.Press(pill, false); onClick(); };
+        return pill;
+    }
+
+    private void SetDetailsToggle(bool on)
+    {
+        var pill = _detailsButton;
+        pill.ToolTip = on ? Loc.T("Hide the details and preview") : Loc.T("Show the details and preview");
+        pill.SetResourceReference(Border.BackgroundProperty, on ? "AccentBrush" : "PopupBrush");
+        pill.SetResourceReference(Border.BorderBrushProperty, on ? "AccentBrush" : "ToggleTrackBrush");
+        if (pill.Child is StackPanel row)
+            foreach (var text in row.Children.OfType<TextBlock>())
+                text.SetResourceReference(TextBlock.ForegroundProperty, on ? "OnAccentBrush" : "MutedBrush");
+    }
+
+    /// <summary>Empties the details column (no results: nothing of the last match may linger there).</summary>
+    private void ClearDetails()
+    {
+        _previewDebounce?.Stop();
+        _preview?.Release();
+        PreviewSlot.Content = null;
+        PreviewTitle.Text = "";
+        PreviewDetails.Text = "";
+        _detailsFor = null;
     }
 
     /// <summary>Fills the details column for the selected result (files: a preview; others: what they are).</summary>
@@ -728,7 +747,6 @@ public partial class LauncherWindow : Window
             stack.Children.Add(Fact(used.Count == 1
                 ? Loc.F("Opened {0} time from here · last {1:yyyy-MM-dd HH:mm}", used.Count, used.Last)
                 : Loc.F("Opened {0} times from here · last {1:yyyy-MM-dd HH:mm}", used.Count, used.Last)));
-        if (_ctx.Stats.IsPinned(item.Id)) stack.Children.Add(Fact(Loc.T("Pinned — shown first when the search box is empty")));
         stack.Children.Add(Fact(item.Kind switch
         {
             LauncherItemKind.App => Loc.T("Enter or double-click opens · right-click for more"),
@@ -790,13 +808,9 @@ public partial class LauncherWindow : Window
             Add(Loc.T("Copy path"), "Ctrl+Shift+C", () => RunSelected(LaunchMode.CopyPath));
             if (isFile || isFolder) Add(Loc.T("Copy file"), "", () => CopyFile(path));
         }
-        if (item.Kind is LauncherItemKind.App or LauncherItemKind.Command or LauncherItemKind.File or LauncherItemKind.Folder)
-        {
-            Separator();
-            Add(_ctx.Stats.IsPinned(item.Id) ? Loc.T("Unpin") : Loc.T("Pin to the top"), "Ctrl+P", TogglePin);
-        }
         if (item.FromHistory)
         {
+            Separator();
             Add(Loc.T("Remove from history"), "Del", () => ForgetItem(item));
             Add(Loc.T("Clear history"), "", ClearHistory);
         }
