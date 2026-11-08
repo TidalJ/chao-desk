@@ -105,6 +105,8 @@ public class UiSnapshots
                              ("contrast-bar", new ThemeManager.Adjust(Sidebar: "contrast", Nav: "bar", Card: "raised")),
                              ("icons-filled", new ThemeManager.Adjust(Sidebar: "icons", Nav: "filled", Radius: 4, Font: "mono")),
                              ("float-linear", new ThemeManager.Adjust(Sidebar: "float", Light: new ThemeManager.Backdrop("linear", ["#FFE9DE", "#E9E6FB"], 120), Card: "glass")),
+                             ("pink-gradient-filled", new ThemeManager.Adjust(Accent: "#FF3897", AccentEnd: "#B4EBFF", Light: new ThemeManager.Backdrop("linear", ["#FFFFFF", "#FFCEF0"], 168),
+                                 Card: "glass", CardOpacity: 0.44, Font: "serif", Nav: "filled", Icons: "accent")),
                          })
                 {
                     ThemeManager.SetTheme("celadon");

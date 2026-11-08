@@ -70,11 +70,15 @@ public static class ThemeManager
         /// <summary>These adjustments without the action panel's.</summary>
         public Adjust WithoutPanel() => this with { Panel = null, PanelBackground = null, PanelTiles = null, PanelRadius = null, PanelIcons = null, PanelFont = null, PanelColours = null };
 
+        [System.Text.Json.Serialization.JsonIgnore]
         public bool AdjustsPanel => Panel != null || PanelBackground != null || PanelTiles != null || PanelRadius != null || PanelIcons != null || PanelFont != null || PanelColours != null;
 
         public static readonly Adjust None = new();
 
         /// <summary>The names (as shown) of what is adjusted.</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool HasChanges => !IsEmpty;
+
         public IEnumerable<string> Changes()
         {
             if (Accent != null || AccentEnd != null) yield return "Accent";
@@ -89,6 +93,7 @@ public static class ThemeManager
             if (AdjustsPanel) yield return "Action panel";
         }
 
+        [System.Text.Json.Serialization.JsonIgnore]
         public bool IsEmpty => !Changes().Any();
     }
 
@@ -484,9 +489,9 @@ public static class ThemeManager
 
         // Sidebar: its background, text and how the current page is marked.
         bool contrast = st.Sidebar == "contrast";
-        // "same": a shade apart from the page (a little deeper), so no edge line is needed.
+        // "same": a shade apart from the page — lighter on light themes, deeper on dark ones — never a grey veil.
         Color side = contrast ? look.Version.Side ?? (dark ? Mix(s.Page, white, 0.05) : Mix(Hex("#1C1F26"), accent, 0.1))
-            : dark ? Mix(s.Page, black, 0.25) : Mix(s.Page, s.Ink, 0.05);
+            : dark ? Mix(s.Page, black, 0.25) : Mix(s.Page, white, 0.6);
         bool sideDark = contrast ? Lightness(side) < 0.25 : dark;
         Color sideInk = contrast ? (sideDark ? Hex("#EDEFF3") : s.Ink) : s.Ink;
         Color sideMuted = Mix(sideInk, side, sideDark ? 0.34 : 0.38);
@@ -496,10 +501,15 @@ public static class ThemeManager
         {
             "contrast" => side,
             "float" => Color.FromArgb(dark ? (byte)0x1A : (byte)0xB8, dark ? (byte)255 : s.Card.R, dark ? (byte)255 : s.Card.G, dark ? (byte)255 : s.Card.B),
-            _ when backdrop => dark ? Color.FromArgb(0x38, 0, 0, 0) : Color.FromArgb(0x0E, s.Ink.R, s.Ink.G, s.Ink.B),
+            _ when backdrop => dark ? Color.FromArgb(0x38, 0, 0, 0) : Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF),
             _ => side,
         });
-        Set(d, "SideLineBrush", st.Sidebar switch { "float" => st.Card == "glass" || dark ? Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF) : line, _ => clear });
+        Set(d, "SideLineBrush", st.Sidebar switch
+        {
+            "float" => st.Card == "glass" || dark ? Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF) : line,
+            "same" or "icons" => dark ? Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x12, s.Ink.R, s.Ink.G, s.Ink.B),
+            _ => clear,
+        });
         Set(d, "SideInkBrush", sideInk);
         Set(d, "SideMutedBrush", sideMuted);
         Set(d, "SideHoverBrush", sideDark ? Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x10, s.Ink.R, s.Ink.G, s.Ink.B));
