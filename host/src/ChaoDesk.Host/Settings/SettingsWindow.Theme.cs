@@ -533,20 +533,52 @@ public partial class SettingsWindow
         foreach (var (id, name) in new[] { ("theme", "Like the theme"), ("liquid", "Liquid glass"), ("soft", "Soft glass"), ("smoked", "Smoked glass") })
         {
             string chosen = id;
-            tiles.Children.Add(OptionTile(PanelSample(look with { Style = st with { Panel = id } }, 116, 76), Loc.T(name), st.Panel == id, () => Commit(Current with { Panel = chosen })));
+            tiles.Children.Add(OptionTile(PanelSample(look with { Style = st with { Panel = id } }, 118), Loc.T(name), st.Panel == id, () => Commit(Current with { Panel = chosen })));
         }
         AddRow(rows, Loc.T("Panel look"), tiles);
-        AddRow(rows, Loc.T("Preview"), PanelSample(look, 320, 206));
+        AddRow(rows, Loc.T("Preview"), PanelSample(look, 324));
 
         if (st.Panel == "theme")
         {
-            AddRow(rows, Loc.T("Panel background"), Segmented([("theme", Loc.T("Like the theme")), ("plain", Loc.T("Plain")), ("accent", Loc.T("Accent wash"))],
-                st.PanelBackground, v => Commit(Current with { PanelBackground = v })));
+            string page = ThemeManager.Hex(look.Shades.Page);
+            string[] colours = st.PanelColours ?? [];
+            AddRow(rows, Loc.T("Panel background"), Segmented([("theme", Loc.T("Like the theme")), ("plain", Loc.T("Plain")), ("gradient", Loc.T("Gradient")), ("accent", Loc.T("Accent wash"))],
+                st.PanelBackground, v => Commit(v switch
+                {
+                    "plain" => Current with { PanelBackground = v, PanelColours = [colours.Length > 0 ? colours[0] : page] },
+                    "gradient" => Current with { PanelBackground = v, PanelColours = colours.Length >= 2 ? colours : [ThemeManager.Hex(ThemeManager.Mix(look.Shades.Page, look.Shades.Accent, 0.3)), page] },
+                    _ => Current with { PanelBackground = v, PanelColours = null },
+                })));
+            if (st.PanelBackground == "plain" && colours.Length > 0)
+            {
+                var line = new StackPanel { Orientation = Orientation.Horizontal };
+                BuildColourRow(line, ThemeManager.Backgrounds, colours[0],
+                    hex => Commit(Current with { PanelColours = [hex] }), hex => ThemeManager.Preview(Current with { PanelColours = [hex] }));
+                AddRow(rows, Loc.T("Panel colour"), line);
+            }
+            else if (st.PanelBackground == "gradient" && colours.Length >= 2)
+            {
+                var line = new StackPanel { Orientation = Orientation.Horizontal };
+                for (int i = 0; i < colours.Length; i++)
+                {
+                    int index = i;
+                    string[] With(string hex) { var c = colours.ToArray(); c[index] = hex; return c; }
+                    Border swatch = null!;
+                    swatch = Swatch(colours[i], Loc.T("Click to change this colour"), true, () => OpenPicker(swatch, colours[index],
+                        hex => Commit(Current with { PanelColours = With(hex) }), hex => ThemeManager.Preview(Current with { PanelColours = With(hex) })));
+                    line.Children.Add(swatch);
+                    if (i == 0)
+                        line.Children.Add(new Border { Width = 70, Height = 10, CornerRadius = new CornerRadius(5), Margin = new Thickness(6, 0, 6, 0), VerticalAlignment = VerticalAlignment.Center,
+                            Background = ThemeBackdrop.Linear(colours.Select(ThemeManager.Hex).ToList(), 90) });
+                }
+                AddRow(rows, Loc.T("Panel colours"), line);
+            }
             AddRow(rows, Loc.T("Buttons"), Segmented([("theme", Loc.T("Like the cards")), ("solid", Loc.T("Solid")), ("glass", Loc.T("Frosted glass")), ("outline", Loc.T("Outline")), ("flat", Loc.T("Flat"))],
                 st.PanelTiles, v => Commit(Current with { PanelTiles = v })));
             AddRow(rows, Loc.T("Icon colour"), Segmented([("ink", Loc.T("Text colour")), ("accent", Loc.T("Accent"))], st.PanelIcons, v => Commit(Current with { PanelIcons = v })));
+            AddRow(rows, Loc.T("Font"), Segmented([("theme", Loc.T("Like the theme")), ("sans", Loc.T("Sans")), ("serif", Loc.T("Serif")), ("geo", Loc.T("Geometric")), ("mono", Loc.T("Monospace"))],
+                st.PanelFont, v => Commit(Current with { PanelFont = v })));
             AddRow(rows, Loc.T("Corners"), SliderRow(0, 32, st.PanelCorners, Loc.T("Square"), Loc.T("Round"), v => Current with { PanelRadius = Math.Round(v) }));
-            AddRow(rows, Loc.T("Panel opacity"), SliderRow(0.5, 1, st.PanelOpacity, Loc.T("See-through"), Loc.T("Solid"), v => Current with { PanelOpacity = Math.Round(v, 2) }));
         }
         else AddRow(rows, Loc.T("Glass"), GlassControls());
 
@@ -559,49 +591,79 @@ public partial class SettingsWindow
         }
     }
 
-    /// <summary>A picture of the action panel in a look (background, buttons, icons, corners), over the theme's background.</summary>
-    private static FrameworkElement PanelSample(ThemeManager.Look look, double w, double h)
+    /// <summary>
+    /// The action panel as it opens — its real size, layout, actions, icons, colours, font and corners — scaled to
+    /// <paramref name="width"/>. Glass is shown over the theme's background, standing in for the desktop.
+    /// </summary>
+    private FrameworkElement PanelSample(ThemeManager.Look look, double width)
     {
-        var s = look.Shades;
         var st = look.Style;
         bool themed = st.Panel == "theme";
-        double scale = w / 300;
-        double r = Math.Max(3, (themed ? st.PanelCorners : 18) * scale);
+        var items = _host.PanelActions?.Items.ToList() ?? [];
+        int rowsCount = Math.Max(1, (items.Count + Panel.PanelLayout.Columns - 1) / Panel.PanelLayout.Columns);
+        double w = Panel.PanelLayout.Width, h = 82 + rowsCount * 82;
+        double r = Math.Min(themed ? st.PanelCorners : (_host.PanelGlass ?? new Panel.GlassOptions()).Radius, Math.Min(w, h) / 2);
         var root = new Grid { Width = w, Height = h, Clip = new RectangleGeometry(new Rect(0, 0, w, h), r, r) };
-        // The desktop behind: the theme's own background stands in for it.
-        foreach (var layer in ThemeBackdrop.Layers(look, mini: true)) root.Children.Add(layer);
+
+        Color ink, accent;
+        Brush fill, edge;
+        double edgeWidth;
+        Effect? shadow;
         if (themed)
         {
-            var face = new Grid { Opacity = st.PanelOpacity };
-            foreach (var layer in ThemeBackdrop.PanelLayers(look, mini: true)) face.Children.Add(layer);
-            root.Children.Add(face);
-            root.Children.Add(new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(r), BorderBrush = new SolidColorBrush(ThemeManager.Mix(s.Page, s.Ink, 0.12)) });
+            foreach (var layer in ThemeBackdrop.PanelLayers(look, mini: false)) root.Children.Add(layer);
+            var (shades, _) = ThemeBackdrop.PanelShades(look);
+            ink = shades.Ink; accent = shades.Accent;
+            (fill, edge, edgeWidth, shadow) = ThemeBackdrop.PanelTile(look);
+            root.Children.Add(new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(r), BorderBrush = new SolidColorBrush(ThemeManager.Mix(look.Shades.Page, look.Shades.Ink, 0.13)) });
         }
         else
         {
+            // Glass: the desktop (here the theme's background) softened and tinted, a bright rim, white text.
+            foreach (var layer in ThemeBackdrop.Layers(look, mini: true)) root.Children.Add(layer);
             root.Children.Add(new Border { Background = new SolidColorBrush(st.Panel switch
             {
-                "smoked" => Color.FromArgb(0xB0, 0x16, 0x1A, 0x20), "soft" => Color.FromArgb(0x70, 0x30, 0x38, 0x42), _ => Color.FromArgb(0x50, 0x20, 0x28, 0x30),
+                "smoked" => Color.FromArgb(0xB4, 0x16, 0x1A, 0x20), "soft" => Color.FromArgb(0x78, 0x2C, 0x34, 0x3E), _ => Color.FromArgb(0x58, 0x1E, 0x26, 0x2E),
             }) });
-            root.Children.Add(new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(r), BorderBrush = new LinearGradientBrush(Color.FromArgb(160, 255, 255, 255), Color.FromArgb(30, 255, 255, 255), 90) });
+            root.Children.Add(new Border { BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(r), BorderBrush = new LinearGradientBrush(Color.FromArgb(150, 255, 255, 255), Color.FromArgb(24, 255, 255, 255), 90) });
+            ink = Colors.White; accent = Colors.White;
+            fill = Brushes.Transparent;
+            edge = new LinearGradientBrush(Color.FromArgb(94, 255, 255, 255), Color.FromArgb(18, 255, 255, 255), 45);
+            edgeWidth = 1; shadow = null;
         }
-        Brush ink = themed ? new SolidColorBrush(s.Ink) : Brushes.White;
-        Brush glyphInk = themed && st.PanelIcons == "accent" ? new SolidColorBrush(s.Accent) : ink;
-        var stack = new StackPanel { Margin = new Thickness(14 * scale, 12 * scale, 14 * scale, 0) };
-        stack.Children.Add(new TextBlock { Text = "Chao Desk", FontSize = Math.Max(7, 13 * scale), FontWeight = FontWeights.SemiBold, Foreground = ink, Margin = new Thickness(0, 0, 0, 8 * scale) });
-        var grid = new System.Windows.Controls.Primitives.UniformGrid { Columns = 3 };
-        var (fill, edge, width, shadow) = themed ? ThemeBackdrop.PanelTile(look) : (Brushes.Transparent, new SolidColorBrush(Color.FromArgb(70, 255, 255, 255)), 1.0, null);
-        string[] glyphs = ["", "", "", "", "", ""];
-        foreach (var glyph in glyphs)
+        Brush inkBrush = new SolidColorBrush(ink);
+        Brush glyphBrush = themed && st.PanelIcons == "accent" ? new SolidColorBrush(accent) : inkBrush;
+        var titleFont = themed ? ThemeBackdrop.PanelFont(look, title: true) : new FontFamily("Segoe UI Variable Text, Microsoft YaHei UI");
+        var bodyFont = themed ? ThemeBackdrop.PanelFont(look, title: false) : titleFont;
+        Shape Icon(string data, double size) => new Path { Data = Geometry.Parse(data), Width = size, Height = size, Stretch = Stretch.Uniform, Stroke = glyphBrush, StrokeThickness = 1.6,
+            StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round, StrokeLineJoin = PenLineJoin.Round };
+
+        var layout = new DockPanel { Margin = new Thickness(16, 15, 16, 12), LastChildFill = true };
+        var head = new DockPanel { MinHeight = 34, Margin = new Thickness(0, 0, 0, 10) };
+        DockPanel.SetDock(head, Dock.Top);
+        if (Panel.PanelAction.Find("settings") is { } settings)
         {
-            var tile = new Border { Height = 56 * scale, Margin = new Thickness(3 * scale), CornerRadius = new CornerRadius(Math.Max(2, Math.Min(r * 0.6, 12 * scale))), BorderThickness = new Thickness(width),
-                Background = fill, BorderBrush = edge, Effect = shadow is DropShadowEffect d ? new DropShadowEffect { BlurRadius = d.BlurRadius * scale, ShadowDepth = d.ShadowDepth * scale, Opacity = d.Opacity, Direction = 270 } : null,
-                Child = new TextBlock { Text = glyph, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = Math.Max(7, 18 * scale), Foreground = glyphInk, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center } };
-            grid.Children.Add(tile);
+            var gear = new Border { Width = 34, Height = 34, Padding = new Thickness(8), Child = Icon(settings.Icon, 18) };
+            DockPanel.SetDock(gear, Dock.Right);
+            head.Children.Add(gear);
         }
-        stack.Children.Add(grid);
-        root.Children.Add(stack);
-        return root;
+        head.Children.Add(new TextBlock { Text = "Chao Desk", FontSize = 16, FontWeight = FontWeights.SemiBold, Foreground = inkBrush, FontFamily = titleFont, VerticalAlignment = VerticalAlignment.Center });
+        layout.Children.Add(head);
+        var grid = new System.Windows.Controls.Primitives.UniformGrid { Columns = Panel.PanelLayout.Columns, VerticalAlignment = VerticalAlignment.Top };
+        foreach (var item in items)
+        {
+            var content = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            var icon = Icon(Panel.PanelActionPresentation.ItemIcon(item), 23);
+            icon.HorizontalAlignment = HorizontalAlignment.Center;
+            icon.Margin = new Thickness(0, 0, 0, 8);
+            content.Children.Add(icon);
+            content.Children.Add(new TextBlock { Text = Panel.PanelActionPresentation.ItemName(item), FontSize = 13, Foreground = inkBrush, FontFamily = bodyFont, TextAlignment = TextAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
+            grid.Children.Add(new Border { Height = 76, Margin = new Thickness(3), Padding = new Thickness(4, 9, 4, 9), CornerRadius = new CornerRadius(12), Background = fill, BorderBrush = edge,
+                BorderThickness = new Thickness(edgeWidth), Effect = shadow, Child = content });
+        }
+        layout.Children.Add(grid);
+        root.Children.Add(layout);
+        return new Viewbox { Width = width, Height = width * h / w, Stretch = Stretch.Uniform, Child = root, HorizontalAlignment = HorizontalAlignment.Left };
     }
 
     /// <summary>The glass controls: refraction mode and the optical sliders, saved as they move.</summary>

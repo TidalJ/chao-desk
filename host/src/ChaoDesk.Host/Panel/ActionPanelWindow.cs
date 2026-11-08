@@ -54,7 +54,6 @@ public sealed partial class ActionPanelWindow : Window
     /// <summary>The theme's own look: its background, cards, colours and title font instead of glass.</summary>
     private bool Themed => _material() == "theme" && !SystemParameters.HighContrast;
     private readonly Border _themeFace = new() { IsHitTestVisible = false, BorderThickness = new Thickness(1), Visibility = Visibility.Collapsed };
-    private static readonly string[] GlassKeys = ["InkBrush", "MutedBrush", "AccentBrush", "ControlBrush", "AccentSoftBrush", "HoverBrush"];
     internal int GlassFrames => _glass?.Delivered ?? 0;
     internal long GlassUploads => _uploadCount;
     internal Rect CapturedBounds => _captureBounds;
@@ -165,14 +164,19 @@ public sealed partial class ActionPanelWindow : Window
     {
         if (Themed)
         {
-            // Take the app's theme brushes (no window-scoped glass palette) and paint the theme's background.
-            foreach (string name in GlassKeys) Resources.Remove(name);
+            // The panel's own palette (the theme's, or fitted to a colour of its own) and font, scoped to this window.
+            var look = ThemeManager.CurrentLook;
+            var (shades, dark) = Settings.ThemeBackdrop.PanelShades(look);
             foreach (var key in new object[] { SystemColors.HighlightBrushKey, SystemColors.HighlightTextBrushKey, SystemColors.WindowBrushKey, SystemColors.WindowTextBrushKey }) Resources.Remove(key);
-            _ink = (Brush)FindResource("InkBrush"); _muted = (Brush)FindResource("MutedBrush"); _hover = (Brush)FindResource("HoverBrush");
-            SetResourceReference(ForegroundProperty, "InkBrush");
-            _status.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
-            _heading.SetResourceReference(TextBlock.ForegroundProperty, "InkBrush");
-            _heading.SetResourceReference(TextBlock.FontFamilyProperty, "TitleFont");
+            Resources["InkBrush"] = _ink = new SolidColorBrush(shades.Ink);
+            Resources["MutedBrush"] = _muted = new SolidColorBrush(Settings.ThemeManager.Mix(shades.Ink, shades.Page, 0.4));
+            Resources["AccentBrush"] = new SolidColorBrush(shades.Accent);
+            Resources["HoverBrush"] = _hover = new SolidColorBrush(Color.FromArgb(dark ? (byte)0x18 : (byte)0x0F, shades.Ink.R, shades.Ink.G, shades.Ink.B));
+            Resources["ControlBrush"] = new SolidColorBrush(shades.Card);
+            Resources["AccentSoftBrush"] = new SolidColorBrush(Settings.ThemeManager.Mix(shades.Page, shades.Accent, dark ? 0.22 : 0.12));
+            Foreground = _ink; _status.Foreground = _muted; _heading.Foreground = _ink;
+            FontFamily = Settings.ThemeBackdrop.PanelFont(look, title: false);
+            _heading.FontFamily = Settings.ThemeBackdrop.PanelFont(look, title: true);
             _heading.Effect = null; _status.Effect = null;
             _tint.Background = null;
             // The glass layer draws black without a desktop picture to refract: keep it out of the theme's look.
@@ -180,7 +184,6 @@ public sealed partial class ActionPanelWindow : Window
             var face = new Grid();
             foreach (var layer in Settings.ThemeBackdrop.PanelLayers(ThemeManager.CurrentLook, mini: false)) face.Children.Add(layer);
             _themeFace.Child = face;
-            _themeFace.Opacity = ThemeManager.CurrentStyle.PanelOpacity; // below 1 the desktop shows through
             _themeFace.SetResourceReference(Border.BorderBrushProperty, "LineBrush");
             _themeFace.Visibility = Visibility.Visible;
             Refresh();
@@ -189,6 +192,7 @@ public sealed partial class ActionPanelWindow : Window
         _themeFace.Visibility = Visibility.Collapsed; _themeFace.Child = null;
         _glassScene.Visibility = Visibility.Visible;
         _heading.ClearValue(TextBlock.FontFamilyProperty);
+        FontFamily = new FontFamily("Segoe UI Variable Text, Microsoft YaHei UI, Segoe UI");
         _heading.Effect = GlyphContrast(); _status.Effect = GlyphContrast();
         _ink = Brushes.White; _muted = Brushes.White;
         _hover = new SolidColorBrush(Color.FromArgb(18,255,255,255));

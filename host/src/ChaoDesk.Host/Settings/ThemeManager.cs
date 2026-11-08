@@ -40,13 +40,13 @@ public static class ThemeManager
     /// system, title (same as titles), mono. Sidebar: same, contrast, float, icons. Nav: pill, bar, filled, line.
     /// Icons: line, accent, none. Density: compact, default, roomy. Hero: "" (none), a picture or "gradient".
     /// Panel: how the action panel looks — "theme" (the theme's own background and cards) or a glass (liquid, soft, smoked).
-    /// For the theme's look: PanelBackground theme, plain, accent; PanelTiles theme, solid, glass, outline, flat;
-    /// PanelRadius (below 0: the theme's corners); PanelIcons ink, accent; PanelOpacity (1 opaque, lower shows the desktop).
+    /// For the theme's look: PanelBackground theme, plain, gradient (PanelColours), accent; PanelTiles theme, solid,
+    /// glass, outline, flat; PanelRadius (below 0: the theme's corners); PanelIcons ink, accent; PanelFont theme or a font.
     /// </summary>
     public sealed record Style(double Radius = 18, string Card = "solid", double CardOpacity = 0.7, string Font = "sans", string Body = "system",
         double Zoom = 1, string Sidebar = "same", string Nav = "pill", string Icons = "line", double SidebarWidth = 236, string Density = "default",
         double Grain = 0, string Hero = "", bool Motion = true, string Panel = "theme", string PanelBackground = "theme", string PanelTiles = "theme",
-        double PanelRadius = -1, string PanelIcons = "ink", double PanelOpacity = 1)
+        double PanelRadius = -1, string PanelIcons = "ink", string PanelFont = "theme", string[]? PanelColours = null)
     {
         /// <summary>The panel's corner radius: its own, or the theme's corners a little rounder.</summary>
         public double PanelCorners => PanelRadius >= 0 ? PanelRadius : Math.Min(Radius + 6, 30);
@@ -65,12 +65,12 @@ public static class ThemeManager
         double? Radius = null, string? Card = null, double? CardOpacity = null, string? Font = null, string? Body = null, double? Zoom = null,
         string? Sidebar = null, string? Nav = null, string? Icons = null, double? SidebarWidth = null, string? Density = null, double? Grain = null,
         string? Hero = null, bool? Motion = null, string? Panel = null, string? PanelBackground = null, string? PanelTiles = null,
-        double? PanelRadius = null, string? PanelIcons = null, double? PanelOpacity = null)
+        double? PanelRadius = null, string? PanelIcons = null, string? PanelFont = null, string[]? PanelColours = null)
     {
         /// <summary>These adjustments without the action panel's.</summary>
-        public Adjust WithoutPanel() => this with { Panel = null, PanelBackground = null, PanelTiles = null, PanelRadius = null, PanelIcons = null, PanelOpacity = null };
+        public Adjust WithoutPanel() => this with { Panel = null, PanelBackground = null, PanelTiles = null, PanelRadius = null, PanelIcons = null, PanelFont = null, PanelColours = null };
 
-        public bool AdjustsPanel => Panel != null || PanelBackground != null || PanelTiles != null || PanelRadius != null || PanelIcons != null || PanelOpacity != null;
+        public bool AdjustsPanel => Panel != null || PanelBackground != null || PanelTiles != null || PanelRadius != null || PanelIcons != null || PanelFont != null || PanelColours != null;
 
         public static readonly Adjust None = new();
 
@@ -336,11 +336,12 @@ public static class ThemeManager
             Body = a.Body ?? s.Body, Zoom = a.Zoom ?? s.Zoom, Sidebar = a.Sidebar ?? s.Sidebar, Nav = a.Nav ?? s.Nav, Icons = a.Icons ?? s.Icons,
             SidebarWidth = a.SidebarWidth ?? s.SidebarWidth, Density = a.Density ?? s.Density, Grain = a.Grain ?? s.Grain, Hero = a.Hero ?? s.Hero,
             Motion = a.Motion ?? s.Motion, Panel = a.Panel is { } panel && PanelLooks.Contains(panel) ? panel : s.Panel,
-            PanelBackground = a.PanelBackground is "theme" or "plain" or "accent" ? a.PanelBackground : s.PanelBackground,
+            PanelBackground = a.PanelBackground is "theme" or "plain" or "gradient" or "accent" ? a.PanelBackground : s.PanelBackground,
             PanelTiles = a.PanelTiles is "theme" or "solid" or "glass" or "outline" or "flat" ? a.PanelTiles : s.PanelTiles,
             PanelRadius = a.PanelRadius is { } pr ? Math.Clamp(pr, 0, 32) : s.PanelRadius,
             PanelIcons = a.PanelIcons is "ink" or "accent" ? a.PanelIcons : s.PanelIcons,
-            PanelOpacity = a.PanelOpacity is { } po ? Math.Clamp(po, 0.5, 1) : s.PanelOpacity,
+            PanelFont = a.PanelFont is "theme" or "sans" or "serif" or "geo" or "mono" ? a.PanelFont : s.PanelFont,
+            PanelColours = a.PanelColours is { Length: > 0 } pc && pc.All(x => TryParseAccent(x, out _)) ? pc : s.PanelColours,
         };
         var v = dark ? p.Dark : p.Light;
         ImageSource? picture = null;
@@ -407,9 +408,10 @@ public static class ThemeManager
         Set(d, "PreviewBrush", s.Card);
         Set(d, "ControlBrush", s.Card);
         Set(d, "InkBrush", s.Ink);
-        Set(d, "MutedBrush", Mix(s.Ink, s.Page, dark ? 0.38 : 0.45));
-        Set(d, "PlaceholderBrush", Mix(s.Ink, s.Page, dark ? 0.55 : 0.62));
-        Color line = Toward(s.Page, dark ? 0.12 : 0.085);
+        Set(d, "MutedBrush", Mix(s.Ink, s.Page, dark ? 0.34 : 0.4));
+        Set(d, "PlaceholderBrush", Mix(s.Ink, s.Page, dark ? 0.5 : 0.56));
+        Color line = Toward(s.Page, dark ? 0.17 : 0.13);
+        Set(d, "ScrollThumbBrush", Toward(s.Page, dark ? 0.32 : 0.28));
         Set(d, "LineBrush", line);
         Set(d, "TileBrush", Toward(s.Card, dark ? 0.07 : 0.055));
         Set(d, "KeycapBrush", Toward(s.Card, dark ? 0.07 : 0.055));
@@ -484,7 +486,7 @@ public static class ThemeManager
         Color side = contrast ? look.Version.Side ?? (dark ? Mix(s.Page, white, 0.05) : Mix(Hex("#1C1F26"), accent, 0.1)) : s.Page;
         bool sideDark = contrast ? Lightness(side) < 0.25 : dark;
         Color sideInk = contrast ? (sideDark ? Hex("#EDEFF3") : s.Ink) : s.Ink;
-        Color sideMuted = Mix(sideInk, side, sideDark ? 0.4 : 0.45);
+        Color sideMuted = Mix(sideInk, side, sideDark ? 0.34 : 0.38);
         Color sideAccent = contrast && sideDark && Lightness(accent) < 0.3 ? Mix(accent, white, 0.4) : accent;
         Color clear = Color.FromArgb(0, side.R, side.G, side.B);
         Set(d, "SidebarBrush", st.Sidebar switch
@@ -530,7 +532,8 @@ public static class ThemeManager
         Set(d, "NavSelectedBrush", pillBg);
     }
 
-    private static string FontOf(string font, bool body = false) => font switch
+    /// <summary>The Windows font families for a font choice (sans, serif, geo, mono); body text uses the text cut of Segoe.</summary>
+    public static string FontOf(string font, bool body = false) => font switch
     {
         "serif" => "Georgia, Noto Serif SC, Source Han Serif SC, SimSun",
         "geo" => "Bahnschrift, Microsoft YaHei UI",

@@ -65,14 +65,38 @@ internal static class ThemeBackdrop
             };
     }
 
-    /// <summary>The action panel's background in the theme's look: the theme's own, its page colour, or a soft wash of the accent.</summary>
+    /// <summary>
+    /// The panel's own colours in the theme's look. With a colour or gradient of its own, the page is that colour and
+    /// text, cards and lines are fitted to it (light text on a dark colour); otherwise the theme's.
+    /// </summary>
+    public static (ThemeManager.Shades Shades, bool Dark) PanelShades(ThemeManager.Look look)
+    {
+        var s = look.Shades;
+        var st = look.Style;
+        if (st.PanelBackground is "plain" or "gradient" && st.PanelColours is { Length: > 0 } colours)
+        {
+            var page = ThemeManager.Average(colours);
+            bool dark = ThemeManager.Lightness(page) < 0.25;
+            Color ink = dark ? ThemeManager.Hex("#F1F3F5") : look.Dark ? ThemeManager.Hex("#1E2125") : s.Ink;
+            Color card = dark ? ThemeManager.Mix(page, Colors.White, 0.1) : ThemeManager.Mix(page, Colors.White, 0.75);
+            Color accent = dark && ThemeManager.Lightness(s.Accent) < 0.3 ? ThemeManager.Mix(s.Accent, Colors.White, 0.4) : s.Accent;
+            return (new ThemeManager.Shades(page, card, ink, accent), dark);
+        }
+        return (s, look.Dark);
+    }
+
+    /// <summary>The action panel's background in the theme's look: the theme's own, a colour or gradient of its own, or a soft wash of the accent.</summary>
     public static IEnumerable<UIElement> PanelLayers(ThemeManager.Look look, bool mini)
     {
         var s = look.Shades;
+        var colours = look.Style.PanelColours ?? [];
         switch (look.Style.PanelBackground)
         {
             case "plain":
-                yield return new Rectangle { Fill = new SolidColorBrush(s.Page) };
+                yield return new Rectangle { Fill = new SolidColorBrush(colours.Length > 0 ? ThemeManager.Hex(colours[0]) : s.Page) };
+                break;
+            case "gradient" when colours.Length > 0:
+                yield return new Rectangle { Fill = Linear(colours.Select(ThemeManager.Hex).ToList(), DefaultAngle) };
                 break;
             case "accent":
                 Color end = look.Version.AccentEnd ?? s.Accent;
@@ -86,25 +110,29 @@ internal static class ThemeBackdrop
 
     /// <summary>
     /// How the panel's action tiles look in the theme's look: like the theme's cards, or solid, frosted, outlined or
-    /// flat. Returns the fill, the edge (with its width) and a shadow for raised cards.
+    /// flat, in the panel's colours. Returns the fill, the edge (with its width) and a shadow for raised cards.
     /// </summary>
     public static (Brush Fill, Brush Edge, double Width, Effect? Shadow) PanelTile(ThemeManager.Look look)
     {
-        var s = look.Shades;
+        var (s, dark) = PanelShades(look);
         var st = look.Style;
-        bool dark = look.Dark;
         static Brush Solid(Color c) => new SolidColorBrush(c);
         string kind = st.PanelTiles != "theme" ? st.PanelTiles : st.Card switch { "glass" => "glass", "outline" => "outline", "raised" => "raised", _ => "solid" };
         return kind switch
         {
             "glass" => (Solid(dark ? Color.FromArgb(0x1C, 255, 255, 255) : Color.FromArgb((byte)(255 * Math.Clamp(st.CardOpacity, 0.35, 0.9)), 255, 255, 255)),
                         Solid(dark ? Color.FromArgb(0x26, 255, 255, 255) : Color.FromArgb(0xE6, 255, 255, 255)), 1, null),
-            "outline" => (Brushes.Transparent, Solid(ThemeManager.Mix(s.Page, s.Ink, dark ? 0.26 : 0.2)), 1, null),
-            "flat" => (Solid(Color.FromArgb(dark ? (byte)0x12 : (byte)0x0A, s.Ink.R, s.Ink.G, s.Ink.B)), Brushes.Transparent, 0, null),
+            "outline" => (Brushes.Transparent, Solid(ThemeManager.Mix(s.Page, s.Ink, dark ? 0.3 : 0.24)), 1, null),
+            "flat" => (Solid(Color.FromArgb(dark ? (byte)0x14 : (byte)0x0C, s.Ink.R, s.Ink.G, s.Ink.B)), Brushes.Transparent, 0, null),
             "raised" => (Solid(s.Card), Brushes.Transparent, 0, new DropShadowEffect { BlurRadius = 16, ShadowDepth = 3, Direction = 270, Opacity = dark ? 0.45 : 0.1 }),
-            _ => (Solid(s.Card), Solid(ThemeManager.Mix(s.Page, s.Ink, dark ? 0.14 : 0.1)), 1, null),
+            _ => (Solid(s.Card), Solid(ThemeManager.Mix(s.Page, s.Ink, dark ? 0.16 : 0.13)), 1, null),
         };
     }
+
+    /// <summary>The panel's font family in the theme's look: the app's own, or the chosen one.</summary>
+    public static FontFamily PanelFont(ThemeManager.Look look, bool title) => look.Style.PanelFont == "theme"
+        ? new FontFamily(title ? ThemeManager.FontOf(look.Style.Font) : ThemeManager.FontOf(look.Style.Body == "mono" ? "mono" : look.Style.Body == "title" ? look.Style.Font : "sans", body: true))
+        : new FontFamily(ThemeManager.FontOf(look.Style.PanelFont, body: !title));
 
     private static BitmapSource? _noiseDark, _noiseLight;
 

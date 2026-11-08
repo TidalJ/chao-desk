@@ -383,7 +383,10 @@ Like the cards	跟随卡片
 Flat	无边框
 Icon colour	图标颜色
 Text colour	文字色
-Panel opacity	面板不透明度
-See-through	通透
 Restore the panel	还原面板
 Back to this theme's own panel; other adjustments stay	恢复这个主题自带的面板外观，其他调整保留
+
+# Appearance: action panel options
+Panel colour	面板颜色
+Panel colours	面板渐变色
+Font	字体

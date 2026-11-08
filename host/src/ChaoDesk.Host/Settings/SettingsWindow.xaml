@@ -82,7 +82,7 @@
         </Style>
     </Window.Resources>
 
-    <Grid x:Name="RootGrid">
+    <Grid x:Name="RootGrid" RenderOptions.ClearTypeHint="Enabled">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="236" />
             <ColumnDefinition Width="*" />
