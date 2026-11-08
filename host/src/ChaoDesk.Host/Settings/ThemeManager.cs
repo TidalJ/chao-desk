@@ -413,6 +413,7 @@ public static class ThemeManager
         Color line = Toward(s.Page, dark ? 0.17 : 0.13);
         Set(d, "ScrollThumbBrush", Toward(s.Page, dark ? 0.32 : 0.28));
         Set(d, "LineBrush", line);
+        Set(d, "DividerBrush", Toward(s.Card, dark ? 0.1 : 0.065));
         Set(d, "TileBrush", Toward(s.Card, dark ? 0.07 : 0.055));
         Set(d, "KeycapBrush", Toward(s.Card, dark ? 0.07 : 0.055));
         Set(d, "SelectedRowBrush", Toward(s.Card, dark ? 0.09 : 0.065));
@@ -451,7 +452,7 @@ public static class ThemeManager
             "outline" => Toward(s.Page, dark ? 0.2 : 0.16),
             "glass" when !dark => Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF),
             "glass" => Color.FromArgb(0x1F, 0xFF, 0xFF, 0xFF),
-            _ => line,
+            _ => Toward(s.Page, dark ? 0.11 : 0.075),
         });
         if (st.Card == "raised")
         {
@@ -468,9 +469,9 @@ public static class ThemeManager
         d["SmallRadius"] = new CornerRadius(Math.Min(r, 10));
         (Thickness row, Thickness pad, Thickness nav) = st.Density switch
         {
-            "compact" => (new Thickness(0, 7, 0, 7), new Thickness(18, 2, 18, 2), new Thickness(12, 5, 12, 5)),
-            "roomy" => (new Thickness(0, 16, 0, 16), new Thickness(28, 10, 28, 10), new Thickness(12, 11, 12, 11)),
-            _ => (new Thickness(0, 12, 0, 12), new Thickness(22, 6, 22, 6), new Thickness(12, 8, 12, 8)),
+            "compact" => (new Thickness(0, 7, 0, 7), new Thickness(18, 2, 18, 2), new Thickness(10, 4, 10, 4)),
+            "roomy" => (new Thickness(0, 16, 0, 16), new Thickness(28, 10, 28, 10), new Thickness(10, 9, 10, 9)),
+            _ => (new Thickness(0, 12, 0, 12), new Thickness(22, 6, 22, 6), new Thickness(10, 6, 10, 6)),
         };
         d["RowMargin"] = row;
         d["CardPadding"] = pad;
@@ -483,7 +484,9 @@ public static class ThemeManager
 
         // Sidebar: its background, text and how the current page is marked.
         bool contrast = st.Sidebar == "contrast";
-        Color side = contrast ? look.Version.Side ?? (dark ? Mix(s.Page, white, 0.05) : Mix(Hex("#1C1F26"), accent, 0.1)) : s.Page;
+        // "same": a shade apart from the page (a little deeper), so no edge line is needed.
+        Color side = contrast ? look.Version.Side ?? (dark ? Mix(s.Page, white, 0.05) : Mix(Hex("#1C1F26"), accent, 0.1))
+            : dark ? Mix(s.Page, black, 0.22) : Mix(s.Page, s.Ink, 0.035);
         bool sideDark = contrast ? Lightness(side) < 0.25 : dark;
         Color sideInk = contrast ? (sideDark ? Hex("#EDEFF3") : s.Ink) : s.Ink;
         Color sideMuted = Mix(sideInk, side, sideDark ? 0.34 : 0.38);
@@ -493,10 +496,10 @@ public static class ThemeManager
         {
             "contrast" => side,
             "float" => Color.FromArgb(dark ? (byte)0x1A : (byte)0xB8, dark ? (byte)255 : s.Card.R, dark ? (byte)255 : s.Card.G, dark ? (byte)255 : s.Card.B),
-            "icons" when !backdrop => Mix(s.Page, s.Card, 0.5),
-            _ => backdrop ? clear : s.Page,
+            _ when backdrop => dark ? Color.FromArgb(0x38, 0, 0, 0) : Color.FromArgb(0x0E, s.Ink.R, s.Ink.G, s.Ink.B),
+            _ => side,
         });
-        Set(d, "SideLineBrush", st.Sidebar switch { "contrast" => clear, "float" => st.Card == "glass" || dark ? Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF) : line, _ => line });
+        Set(d, "SideLineBrush", st.Sidebar switch { "float" => st.Card == "glass" || dark ? Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF) : line, _ => clear });
         Set(d, "SideInkBrush", sideInk);
         Set(d, "SideMutedBrush", sideMuted);
         Set(d, "SideHoverBrush", sideDark ? Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x0A, s.Ink.R, s.Ink.G, s.Ink.B));
@@ -522,7 +525,7 @@ public static class ThemeManager
                 break;
             default:
                 Gradient(d, "NavOnBrush", pillBg, pillBg);
-                Set(d, "NavOnBorderBrush", contrast ? Color.FromArgb(0, 0, 0, 0) : line);
+                Set(d, "NavOnBorderBrush", contrast ? Color.FromArgb(0, 0, 0, 0) : dark ? Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x14, s.Ink.R, s.Ink.G, s.Ink.B));
                 Set(d, "NavOnInkBrush", sideInk);
                 Set(d, "NavOnGlyphBrush", sideAccent);
                 break;

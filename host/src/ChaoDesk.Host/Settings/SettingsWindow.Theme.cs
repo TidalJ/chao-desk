@@ -128,7 +128,7 @@ public partial class SettingsWindow
         }
         stack.Children.Add(tabs);
         var rule = new Border { Height = 1, Margin = new Thickness(-26, 0, -26, 4) };
-        rule.SetResourceReference(Border.BackgroundProperty, "LineBrush");
+        rule.SetResourceReference(Border.BackgroundProperty, "DividerBrush");
         stack.Children.Add(rule);
         var rows = new Grid();
         rows.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(150) });
@@ -734,7 +734,7 @@ public partial class SettingsWindow
         if (r > 0)
         {
             var rule = new Border { Height = 1, VerticalAlignment = VerticalAlignment.Top };
-            rule.SetResourceReference(Border.BackgroundProperty, "LineBrush");
+            rule.SetResourceReference(Border.BackgroundProperty, "DividerBrush");
             Grid.SetRow(rule, r);
             Grid.SetColumnSpan(rule, 2);
             rows.Children.Add(rule);

@@ -62,6 +62,7 @@
     <Thickness x:Key="NavItemPadding">12,8</Thickness>
     <FontFamily x:Key="GreetingFont">Georgia, Noto Serif SC, Source Han Serif SC, SimSun</FontFamily>
     <FontFamily x:Key="BodyFont">Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI</FontFamily>
+    <SolidColorBrush x:Key="DividerBrush" Color="#EDF1EF" />
     <SolidColorBrush x:Key="ScrollThumbBrush" Color="#B9C3BF" />
     <SolidColorBrush x:Key="SideLineBrush" Color="#E3EAE7" />
     <SolidColorBrush x:Key="SideInkBrush" Color="#1C2522" />

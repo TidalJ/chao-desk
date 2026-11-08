@@ -76,6 +76,7 @@
         </Style>
         <Style x:Key="NavGroup" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="{DynamicResource SideMutedBrush}" />
             <Setter Property="Margin" Value="12,18,0,6" />
             <Setter Property="Visibility" Value="{DynamicResource NavLabelVisibility}" />
