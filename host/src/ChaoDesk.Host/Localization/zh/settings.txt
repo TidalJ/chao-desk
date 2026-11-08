@@ -363,9 +363,6 @@ Start colour	起始颜色
 End colour	结束颜色
 Accent colours	强调色颜色
 Panel look	面板外观
-The panel uses this theme's background, cards and colours.	面板使用这个主题的背景、卡片和颜色。
-Glass shows the live desktop behind it, so open the panel to see it while you adjust.	玻璃会透出实时桌面，调整时打开面板就能看到效果。
-Open the panel	打开面板
 Glass	玻璃
 Standard	标准
 Polar	极坐标
@@ -377,3 +374,16 @@ Dispersion	色散强度
 Corner radius	圆角半径
 Highlight	边缘高光
 Reset glass	恢复玻璃默认
+
+# Appearance: action panel options
+Panel background	面板背景
+Accent wash	强调色晕染
+Buttons	按钮样式
+Like the cards	跟随卡片
+Flat	无边框
+Icon colour	图标颜色
+Text colour	文字色
+Panel opacity	面板不透明度
+See-through	通透
+Restore the panel	还原面板
+Back to this theme's own panel; other adjustments stay	恢复这个主题自带的面板外观，其他调整保留

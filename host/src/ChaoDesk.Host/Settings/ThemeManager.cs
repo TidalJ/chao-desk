@@ -40,10 +40,17 @@ public static class ThemeManager
     /// system, title (same as titles), mono. Sidebar: same, contrast, float, icons. Nav: pill, bar, filled, line.
     /// Icons: line, accent, none. Density: compact, default, roomy. Hero: "" (none), a picture or "gradient".
     /// Panel: how the action panel looks — "theme" (the theme's own background and cards) or a glass (liquid, soft, smoked).
+    /// For the theme's look: PanelBackground theme, plain, accent; PanelTiles theme, solid, glass, outline, flat;
+    /// PanelRadius (below 0: the theme's corners); PanelIcons ink, accent; PanelOpacity (1 opaque, lower shows the desktop).
     /// </summary>
     public sealed record Style(double Radius = 18, string Card = "solid", double CardOpacity = 0.7, string Font = "sans", string Body = "system",
         double Zoom = 1, string Sidebar = "same", string Nav = "pill", string Icons = "line", double SidebarWidth = 236, string Density = "default",
-        double Grain = 0, string Hero = "", bool Motion = true, string Panel = "theme");
+        double Grain = 0, string Hero = "", bool Motion = true, string Panel = "theme", string PanelBackground = "theme", string PanelTiles = "theme",
+        double PanelRadius = -1, string PanelIcons = "ink", double PanelOpacity = 1)
+    {
+        /// <summary>The panel's corner radius: its own, or the theme's corners a little rounder.</summary>
+        public double PanelCorners => PanelRadius >= 0 ? PanelRadius : Math.Min(Radius + 6, 30);
+    }
 
     public static readonly string[] PanelLooks = ["theme", "liquid", "soft", "smoked"];
 
@@ -57,8 +64,14 @@ public static class ThemeManager
     public sealed record Adjust(string? Accent = null, string? AccentEnd = null, Backdrop? Light = null, Backdrop? Dark = null,
         double? Radius = null, string? Card = null, double? CardOpacity = null, string? Font = null, string? Body = null, double? Zoom = null,
         string? Sidebar = null, string? Nav = null, string? Icons = null, double? SidebarWidth = null, string? Density = null, double? Grain = null,
-        string? Hero = null, bool? Motion = null, string? Panel = null)
+        string? Hero = null, bool? Motion = null, string? Panel = null, string? PanelBackground = null, string? PanelTiles = null,
+        double? PanelRadius = null, string? PanelIcons = null, double? PanelOpacity = null)
     {
+        /// <summary>These adjustments without the action panel's.</summary>
+        public Adjust WithoutPanel() => this with { Panel = null, PanelBackground = null, PanelTiles = null, PanelRadius = null, PanelIcons = null, PanelOpacity = null };
+
+        public bool AdjustsPanel => Panel != null || PanelBackground != null || PanelTiles != null || PanelRadius != null || PanelIcons != null || PanelOpacity != null;
+
         public static readonly Adjust None = new();
 
         /// <summary>The names (as shown) of what is adjusted.</summary>
@@ -73,7 +86,7 @@ public static class ThemeManager
             if (Density != null || Motion != null) yield return "Density";
             if (Grain != null) yield return "Grain";
             if (Hero != null) yield return "Banner";
-            if (Panel != null) yield return "Action panel";
+            if (AdjustsPanel) yield return "Action panel";
         }
 
         public bool IsEmpty => !Changes().Any();
@@ -323,6 +336,11 @@ public static class ThemeManager
             Body = a.Body ?? s.Body, Zoom = a.Zoom ?? s.Zoom, Sidebar = a.Sidebar ?? s.Sidebar, Nav = a.Nav ?? s.Nav, Icons = a.Icons ?? s.Icons,
             SidebarWidth = a.SidebarWidth ?? s.SidebarWidth, Density = a.Density ?? s.Density, Grain = a.Grain ?? s.Grain, Hero = a.Hero ?? s.Hero,
             Motion = a.Motion ?? s.Motion, Panel = a.Panel is { } panel && PanelLooks.Contains(panel) ? panel : s.Panel,
+            PanelBackground = a.PanelBackground is "theme" or "plain" or "accent" ? a.PanelBackground : s.PanelBackground,
+            PanelTiles = a.PanelTiles is "theme" or "solid" or "glass" or "outline" or "flat" ? a.PanelTiles : s.PanelTiles,
+            PanelRadius = a.PanelRadius is { } pr ? Math.Clamp(pr, 0, 32) : s.PanelRadius,
+            PanelIcons = a.PanelIcons is "ink" or "accent" ? a.PanelIcons : s.PanelIcons,
+            PanelOpacity = a.PanelOpacity is { } po ? Math.Clamp(po, 0.5, 1) : s.PanelOpacity,
         };
         var v = dark ? p.Dark : p.Light;
         ImageSource? picture = null;

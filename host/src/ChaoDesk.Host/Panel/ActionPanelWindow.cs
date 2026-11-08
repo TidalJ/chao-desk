@@ -175,15 +175,19 @@ public sealed partial class ActionPanelWindow : Window
             _heading.SetResourceReference(TextBlock.FontFamilyProperty, "TitleFont");
             _heading.Effect = null; _status.Effect = null;
             _tint.Background = null;
+            // The glass layer draws black without a desktop picture to refract: keep it out of the theme's look.
+            _glassScene.Visibility = Visibility.Collapsed;
             var face = new Grid();
-            foreach (var layer in Settings.ThemeBackdrop.Layers(ThemeManager.CurrentLook, mini: false)) face.Children.Add(layer);
+            foreach (var layer in Settings.ThemeBackdrop.PanelLayers(ThemeManager.CurrentLook, mini: false)) face.Children.Add(layer);
             _themeFace.Child = face;
+            _themeFace.Opacity = ThemeManager.CurrentStyle.PanelOpacity; // below 1 the desktop shows through
             _themeFace.SetResourceReference(Border.BorderBrushProperty, "LineBrush");
             _themeFace.Visibility = Visibility.Visible;
             Refresh();
             return;
         }
         _themeFace.Visibility = Visibility.Collapsed; _themeFace.Child = null;
+        _glassScene.Visibility = Visibility.Visible;
         _heading.ClearValue(TextBlock.FontFamilyProperty);
         _heading.Effect = GlyphContrast(); _status.Effect = GlyphContrast();
         _ink = Brushes.White; _muted = Brushes.White;
@@ -236,7 +240,7 @@ public sealed partial class ActionPanelWindow : Window
         _glassScene.Configure(new Size(w, h), dpi, blurRadius, options.Displacement, options.Aberration);
         _glass?.SetOverscan((int)Math.Ceiling(96+Math.Max(dpi.DpiScaleX,dpi.DpiScaleY)*(options.Displacement*.5*(1+options.Aberration*.1)+blurRadius)));
         // One outer silhouette. Shader opacity and native DWM rounding must not cut it again.
-        double wanted = Themed ? Math.Min(ThemeManager.CurrentStyle.Radius + 6, 30) : options.Radius;
+        double wanted = Themed ? ThemeManager.CurrentStyle.PanelCorners : options.Radius;
         double radius = Math.Min(wanted, Math.Min(w,h)/2);
         _surface.Clip = new RectangleGeometry(new Rect(_surface.RenderSize), radius, radius);
         _shine.CornerRadius = new CornerRadius(wanted);
@@ -407,11 +411,12 @@ public sealed partial class ActionPanelWindow : Window
     {
         if (Themed)
         {
-            // Action tiles are the theme's cards: its surface, border and (for raised cards) shadow.
-            button.SetResourceReference(BackgroundProperty, "SurfaceBrush");
-            button.SetResourceReference(BorderBrushProperty, "CardBorderBrush");
-            button.BorderThickness = new Thickness(1);
-            button.Tag = TryFindResource("CardEffect");
+            // Action tiles in the theme's look: its cards, or the style chosen for the panel.
+            var (fill, edge, width, shadow) = Settings.ThemeBackdrop.PanelTile(ThemeManager.CurrentLook);
+            button.Background = fill;
+            button.BorderBrush = edge;
+            button.BorderThickness = new Thickness(width);
+            button.Tag = shadow;
             return;
         }
         if (SystemParameters.HighContrast) return;
@@ -623,7 +628,7 @@ public sealed partial class ActionPanelWindow : Window
     private new ShapePath Icon(string data, double size)
     {
         var icon = new ShapePath { Data = Geometry.Parse(data), Width = size, Height = size, Stretch = Stretch.Uniform, StrokeThickness = 1.6, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round, StrokeLineJoin = PenLineJoin.Round, Effect = GlyphContrast() };
-        icon.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "InkBrush");
+        icon.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, Themed && ThemeManager.CurrentStyle.PanelIcons == "accent" ? "AccentBrush" : "InkBrush");
         return icon;
     }
     private Button IconButton(string path, string name, Action run)

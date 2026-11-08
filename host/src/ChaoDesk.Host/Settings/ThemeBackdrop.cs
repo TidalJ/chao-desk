@@ -65,6 +65,47 @@ internal static class ThemeBackdrop
             };
     }
 
+    /// <summary>The action panel's background in the theme's look: the theme's own, its page colour, or a soft wash of the accent.</summary>
+    public static IEnumerable<UIElement> PanelLayers(ThemeManager.Look look, bool mini)
+    {
+        var s = look.Shades;
+        switch (look.Style.PanelBackground)
+        {
+            case "plain":
+                yield return new Rectangle { Fill = new SolidColorBrush(s.Page) };
+                break;
+            case "accent":
+                Color end = look.Version.AccentEnd ?? s.Accent;
+                yield return new Rectangle { Fill = Linear([ThemeManager.Mix(s.Page, s.Accent, look.Dark ? 0.3 : 0.18), s.Page, ThemeManager.Mix(s.Page, end, look.Dark ? 0.24 : 0.14)], DefaultAngle) };
+                break;
+            default:
+                foreach (var layer in Layers(look, mini)) yield return layer;
+                break;
+        }
+    }
+
+    /// <summary>
+    /// How the panel's action tiles look in the theme's look: like the theme's cards, or solid, frosted, outlined or
+    /// flat. Returns the fill, the edge (with its width) and a shadow for raised cards.
+    /// </summary>
+    public static (Brush Fill, Brush Edge, double Width, Effect? Shadow) PanelTile(ThemeManager.Look look)
+    {
+        var s = look.Shades;
+        var st = look.Style;
+        bool dark = look.Dark;
+        static Brush Solid(Color c) => new SolidColorBrush(c);
+        string kind = st.PanelTiles != "theme" ? st.PanelTiles : st.Card switch { "glass" => "glass", "outline" => "outline", "raised" => "raised", _ => "solid" };
+        return kind switch
+        {
+            "glass" => (Solid(dark ? Color.FromArgb(0x1C, 255, 255, 255) : Color.FromArgb((byte)(255 * Math.Clamp(st.CardOpacity, 0.35, 0.9)), 255, 255, 255)),
+                        Solid(dark ? Color.FromArgb(0x26, 255, 255, 255) : Color.FromArgb(0xE6, 255, 255, 255)), 1, null),
+            "outline" => (Brushes.Transparent, Solid(ThemeManager.Mix(s.Page, s.Ink, dark ? 0.26 : 0.2)), 1, null),
+            "flat" => (Solid(Color.FromArgb(dark ? (byte)0x12 : (byte)0x0A, s.Ink.R, s.Ink.G, s.Ink.B)), Brushes.Transparent, 0, null),
+            "raised" => (Solid(s.Card), Brushes.Transparent, 0, new DropShadowEffect { BlurRadius = 16, ShadowDepth = 3, Direction = 270, Opacity = dark ? 0.45 : 0.1 }),
+            _ => (Solid(s.Card), Solid(ThemeManager.Mix(s.Page, s.Ink, dark ? 0.14 : 0.1)), 1, null),
+        };
+    }
+
     private static BitmapSource? _noiseDark, _noiseLight;
 
     /// <summary>A tile of random specks (white on dark themes, black on light ones) for a paper-like grain.</summary>

@@ -83,7 +83,7 @@ public class UiSnapshots
                 ThemeManager.Apply("light");
                 // The appearance page: every tab, on an adjusted theme (with restore and save), light and dark.
                 ThemeManager.SetTheme("aurora");
-                ThemeManager.SetAdjust(new ThemeManager.Adjust(Accent: "#FF8A65", AccentEnd: "#E5577E", Radius: 12));
+                ThemeManager.SetAdjust(new ThemeManager.Adjust(Accent: "#FF8A65", AccentEnd: "#E5577E", Radius: 12, Panel: "theme", PanelTiles: "glass", PanelIcons: "accent"));
                 var tabField = typeof(SettingsWindow).GetField("_appearanceTab", BindingFlags.NonPublic | BindingFlags.Instance)!;
                 foreach (var mode in new[] { "light", "dark" })
                 {
