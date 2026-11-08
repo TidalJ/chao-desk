@@ -47,8 +47,8 @@
                         <Grid>
                             <Border x:Name="Bg" CornerRadius="{DynamicResource SmallRadius}" Padding="{DynamicResource NavItemPadding}" Background="Transparent" BorderBrush="Transparent" BorderThickness="1">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock x:Name="Glyph" Text="{TemplateBinding Tag}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="15"
-                                               Width="18" VerticalAlignment="Center" Foreground="{DynamicResource NavGlyphBrush}" Visibility="{DynamicResource NavGlyphVisibility}" Margin="0,0,12,0" />
+                                    <TextBlock x:Name="Glyph" Text="{TemplateBinding Tag}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"
+                                               Width="20" VerticalAlignment="Center" Foreground="{DynamicResource NavGlyphBrush}" Visibility="{DynamicResource NavGlyphVisibility}" Margin="0,0,11,0" />
                                     <ContentPresenter VerticalAlignment="Center" Visibility="{DynamicResource NavLabelVisibility}" />
                                 </StackPanel>
                             </Border>
@@ -63,6 +63,7 @@
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="Bg" Property="Background" Value="{DynamicResource NavOnBrush}" />
                                 <Setter TargetName="Bg" Property="BorderBrush" Value="{DynamicResource NavOnBorderBrush}" />
+                                <Setter TargetName="Bg" Property="Effect" Value="{DynamicResource NavOnEffect}" />
                                 <Setter TargetName="Glyph" Property="Foreground" Value="{DynamicResource NavOnGlyphBrush}" />
                                 <Setter TargetName="Bar" Property="Background" Value="{DynamicResource NavBarBrush}" />
                                 <Setter TargetName="Underline" Property="Background" Value="{DynamicResource NavLineBrush}" />
@@ -76,9 +77,8 @@
         </Style>
         <Style x:Key="NavGroup" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11.5" />
-            <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="{DynamicResource SideMutedBrush}" />
-            <Setter Property="Margin" Value="12,18,0,6" />
+            <Setter Property="Margin" Value="12,16,0,4" />
             <Setter Property="Visibility" Value="{DynamicResource NavLabelVisibility}" />
         </Style>
     </Window.Resources>

@@ -486,7 +486,7 @@ public static class ThemeManager
         bool contrast = st.Sidebar == "contrast";
         // "same": a shade apart from the page (a little deeper), so no edge line is needed.
         Color side = contrast ? look.Version.Side ?? (dark ? Mix(s.Page, white, 0.05) : Mix(Hex("#1C1F26"), accent, 0.1))
-            : dark ? Mix(s.Page, black, 0.22) : Mix(s.Page, s.Ink, 0.035);
+            : dark ? Mix(s.Page, black, 0.25) : Mix(s.Page, s.Ink, 0.05);
         bool sideDark = contrast ? Lightness(side) < 0.25 : dark;
         Color sideInk = contrast ? (sideDark ? Hex("#EDEFF3") : s.Ink) : s.Ink;
         Color sideMuted = Mix(sideInk, side, sideDark ? 0.34 : 0.38);
@@ -502,8 +502,9 @@ public static class ThemeManager
         Set(d, "SideLineBrush", st.Sidebar switch { "float" => st.Card == "glass" || dark ? Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF) : line, _ => clear });
         Set(d, "SideInkBrush", sideInk);
         Set(d, "SideMutedBrush", sideMuted);
-        Set(d, "SideHoverBrush", sideDark ? Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x0A, s.Ink.R, s.Ink.G, s.Ink.B));
-        Set(d, "NavGlyphBrush", st.Icons == "accent" ? sideAccent : sideMuted);
+        Set(d, "SideHoverBrush", sideDark ? Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x10, s.Ink.R, s.Ink.G, s.Ink.B));
+        // Icons in the label's colour family (a little softer), not the faint secondary grey.
+        Set(d, "NavGlyphBrush", st.Icons == "accent" ? sideAccent : Mix(sideInk, side, sideDark ? 0.2 : 0.22));
         d["NavGlyphVisibility"] = st.Icons == "none" ? Visibility.Collapsed : Visibility.Visible;
         d["NavLabelVisibility"] = st.Sidebar == "icons" ? Visibility.Collapsed : Visibility.Visible;
         Color pillBg = contrast ? Color.FromArgb(0x1C, 0xFF, 0xFF, 0xFF) : st.Sidebar == "float" && dark ? Color.FromArgb(0x1C, 0xFF, 0xFF, 0xFF) : s.Card;
@@ -533,6 +534,14 @@ public static class ThemeManager
         Set(d, "NavBarBrush", st.Nav == "bar" ? sideAccent : none);
         Set(d, "NavLineBrush", st.Nav == "line" ? sideAccent : none);
         Set(d, "NavSelectedBrush", pillBg);
+        // The selected pill floats a little on light sidebars; a flat fill elsewhere.
+        if (st.Nav == "pill" && !sideDark && st.Sidebar != "contrast")
+        {
+            var lift = new DropShadowEffect { BlurRadius = 6, ShadowDepth = 1, Direction = 270, Opacity = 0.1, Color = Mix(s.Ink, black, 0.5) };
+            lift.Freeze();
+            d["NavOnEffect"] = lift;
+        }
+        else d["NavOnEffect"] = null;
     }
 
     /// <summary>The Windows font families for a font choice (sans, serif, geo, mono); body text uses the text cut of Segoe.</summary>
